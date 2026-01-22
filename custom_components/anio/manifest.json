@@ -1,0 +1,13 @@
+{
+  "domain": "anio",
+  "name": "ANIO Smartwatch",
+  "codeowners": ["@weller"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/weller/anio-ha-integration",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/weller/anio-ha-integration/issues",
+  "requirements": ["pydantic>=2.0.0"],
+  "version": "1.0.0"
+}

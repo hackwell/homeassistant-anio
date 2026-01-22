@@ -1,0 +1,34 @@
+send_message:
+  name: Send Message
+  description: Send a text or emoji message to an ANIO watch.
+  target:
+    entity:
+      integration: anio
+      domain: notify
+  fields:
+    message:
+      name: Message
+      description: The message text to send (max 95 characters) or emoji code (E01-E12).
+      required: true
+      example: "Hello from Home Assistant!"
+      selector:
+        text:
+    message_type:
+      name: Message Type
+      description: Type of message to send.
+      required: false
+      default: text
+      selector:
+        select:
+          options:
+            - label: Text
+              value: text
+            - label: Emoji
+              value: emoji
+    username:
+      name: Sender Name
+      description: Custom name shown as the message sender on the watch (only for text messages).
+      required: false
+      example: "Mom"
+      selector:
+        text:

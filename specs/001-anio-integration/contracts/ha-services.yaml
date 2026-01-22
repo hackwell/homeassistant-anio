@@ -1,0 +1,66 @@
+# Home Assistant Services Contract
+# Defines services exposed by the ANIO integration
+
+send_message:
+  name: Send Message
+  description: Send a text or emoji message to an ANIO watch
+  target:
+    entity:
+      integration: anio
+      domain: notify
+  fields:
+    message:
+      name: Message
+      description: The message text to send (max 95 characters)
+      required: true
+      example: "Essen ist fertig!"
+      selector:
+        text:
+          multiline: false
+    message_type:
+      name: Message Type
+      description: Type of message to send
+      default: text
+      selector:
+        select:
+          options:
+            - label: Text
+              value: text
+            - label: Emoji
+              value: emoji
+    emoji_code:
+      name: Emoji Code
+      description: Emoji code (E01-E12) when message_type is emoji
+      selector:
+        select:
+          options:
+            - E01
+            - E02
+            - E03
+            - E04
+            - E05
+            - E06
+            - E07
+            - E08
+            - E09
+            - E10
+            - E11
+            - E12
+
+locate_device:
+  name: Locate Device
+  description: Request current location from an ANIO watch
+  target:
+    entity:
+      integration: anio
+      domain: button
+  fields: {}
+
+power_off_device:
+  name: Power Off Device
+  description: Power off an ANIO watch (device will be unreachable until manually turned on)
+  target:
+    entity:
+      integration: anio
+      domain: button
+  fields: {}

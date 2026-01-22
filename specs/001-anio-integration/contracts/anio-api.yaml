@@ -1,0 +1,391 @@
+# ANIO Cloud API Contract
+# Subset relevant for Home Assistant Integration
+# Full API: https://api.anio.cloud/api
+
+openapi: 3.0.3
+info:
+  title: ANIO Cloud API (HA Integration Subset)
+  version: "1.0"
+  description: API contract for ANIO Smartwatch Home Assistant Integration
+
+servers:
+  - url: https://api.anio.cloud
+    description: Production
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        otpCode:
+          type: string
+          description: Required if 2FA enabled
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        isOtpCodeRequired:
+          type: boolean
+
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+
+    DeviceConfig:
+      type: object
+      properties:
+        generation:
+          type: string
+        type:
+          type: string
+          enum: [WATCH]
+        firmwareVersion:
+          type: string
+        maxChatMessageLength:
+          type: integer
+        hasTextChat:
+          type: boolean
+        hasVoiceChat:
+          type: boolean
+        hasEmojis:
+          type: boolean
+        hasStepCounter:
+          type: boolean
+
+    DeviceSettings:
+      type: object
+      properties:
+        name:
+          type: string
+        hexColor:
+          type: string
+        phoneNr:
+          type: string
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        stepTarget:
+          type: integer
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+        imei:
+          type: string
+        config:
+          $ref: '#/components/schemas/DeviceConfig'
+        settings:
+          $ref: '#/components/schemas/DeviceSettings'
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        deviceId:
+          type: string
+        text:
+          type: string
+        username:
+          type: string
+        type:
+          type: string
+          enum: [TEXT, EMOJI, VOICE]
+        sender:
+          type: string
+          enum: [APP, WATCH]
+        isReceived:
+          type: boolean
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    SendMessageRequest:
+      type: object
+      required:
+        - deviceId
+        - text
+      properties:
+        deviceId:
+          type: string
+        text:
+          type: string
+          maxLength: 95
+        username:
+          type: string
+
+    Geofence:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        radius:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+        statusCode:
+          type: integer
+
+paths:
+  /v1/auth/login:
+    post:
+      summary: Authenticate user
+      operationId: login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      parameters:
+        - name: client-id
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [anio]
+        - name: app-uuid
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Login successful or 2FA required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/auth/refresh-access-token:
+    post:
+      summary: Refresh access token
+      operationId: refreshToken
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: app-uuid
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          description: Invalid refresh token
+
+  /v1/auth/logout:
+    post:
+      summary: Logout and invalidate session
+      operationId: logout
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /v1/device/list:
+    get:
+      summary: Get all devices
+      operationId: getDevices
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+
+  /v1/device/{deviceId}:
+    get:
+      summary: Get single device
+      operationId: getDevice
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+
+  /v1/device/{deviceId}/find:
+    post:
+      summary: Request device location
+      operationId: findDevice
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location request sent
+
+  /v1/device/{deviceId}/poweroff:
+    post:
+      summary: Power off device
+      operationId: powerOffDevice
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Power off command sent
+
+  /v1/chat/message/text:
+    post:
+      summary: Send text message
+      operationId: sendTextMessage
+      tags: [Chat]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+
+  /v1/chat/message/emoji:
+    post:
+      summary: Send emoji message
+      operationId: sendEmojiMessage
+      tags: [Chat]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Emoji sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+
+  /v1/activity:
+    get:
+      summary: Get activity feed (includes messages)
+      operationId: getActivity
+      tags: [Activity]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /v1/geofence:
+    get:
+      summary: Get all geofences
+      operationId: getGeofences
+      tags: [Geofences]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of geofences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Geofence'
