@@ -167,7 +167,7 @@
 
 - [x] T051 [P] Create `custom_components/anio/translations/de.json` for German translations
 - [x] T052 [P] Create `custom_components/anio/translations/en.json` for English translations
-- [ ] T053 [P] Create `README.md` with installation instructions, features, and configuration guide
+- [x] T053 [P] Create `README.md` with installation instructions, features, and configuration guide
 - [ ] T054 Run `ruff check custom_components/anio` and fix all linting issues
 - [ ] T055 Run `mypy custom_components/anio` and fix all type errors
 - [ ] T056 Run `pytest --cov=custom_components/anio` and ensure ≥80% coverage
