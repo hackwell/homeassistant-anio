@@ -286,10 +286,15 @@ class AnioApiClient:
         Returns:
             List of geofences.
         """
-        data = await self._request("GET", "/v1/geofence")
-        if not isinstance(data, list):
+        try:
+            data = await self._request("GET", "/v1/geofence")
+            if not isinstance(data, list):
+                return []
+            return [Geofence.model_validate(g) for g in data]
+        except AnioDeviceNotFoundError:
+            # 404 means no geofences exist, which is valid
+            _LOGGER.debug("No geofences found (404 response)")
             return []
-        return [Geofence.model_validate(g) for g in data]
 
     async def get_device_location(self, device_id: str) -> LocationInfo | None:
         """Get the current location of a device.
