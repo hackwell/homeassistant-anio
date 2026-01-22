@@ -112,7 +112,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         """Return additional state attributes."""
         return {
             "geofence_name": self._geofence.name,
-            "latitude": self._geofence.lat,
-            "longitude": self._geofence.lng,
+            "latitude": self._geofence.latitude,
+            "longitude": self._geofence.longitude,
             "radius_meters": self._geofence.radius,
         }

@@ -67,7 +67,7 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
         """Return latitude value of the device."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state and device_state.location:
-            return device_state.location.lat
+            return device_state.location.latitude
         return None
 
     @property
@@ -75,7 +75,7 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
         """Return longitude value of the device."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state and device_state.location:
-            return device_state.location.lng
+            return device_state.location.longitude
         return None
 
     @property

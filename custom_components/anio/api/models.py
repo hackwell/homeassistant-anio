@@ -5,11 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AuthTokens(BaseModel):
     """Authentication tokens from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     access_token: str = Field(alias="accessToken")
     refresh_token: str = Field(alias="refreshToken")
@@ -18,6 +20,8 @@ class AuthTokens(BaseModel):
 
 class DeviceConfig(BaseModel):
     """Device configuration from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     generation: str
     type: Literal["WATCH"] = "WATCH"
@@ -34,6 +38,8 @@ class DeviceConfig(BaseModel):
 
 class DeviceSettings(BaseModel):
     """Device settings from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str
     hex_color: str = Field(alias="hexColor")
@@ -68,6 +74,8 @@ class UserInfo(BaseModel):
 class Device(BaseModel):
     """Device from the ANIO API."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     imei: str
     config: DeviceConfig
@@ -77,6 +85,8 @@ class Device(BaseModel):
 
 class ChatMessage(BaseModel):
     """Chat message from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     device_id: str = Field(alias="deviceId")
@@ -91,6 +101,8 @@ class ChatMessage(BaseModel):
 
 class Geofence(BaseModel):
     """Geofence from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str
@@ -118,6 +130,8 @@ class Geofence(BaseModel):
 class LocationInfo(BaseModel):
     """Location information from the ANIO API."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     latitude: float = Field(alias="lat")
     longitude: float = Field(alias="lng")
     accuracy: int = Field(default=0)
@@ -126,6 +140,8 @@ class LocationInfo(BaseModel):
 
 class ActivityItem(BaseModel):
     """Activity item from the ANIO API feed."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     device_id: str = Field(alias="deviceId")
@@ -136,6 +152,8 @@ class ActivityItem(BaseModel):
 
 class AnioDeviceState(BaseModel):
     """Combined state for an ANIO device."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     device: Device
     location: LocationInfo | None = None
