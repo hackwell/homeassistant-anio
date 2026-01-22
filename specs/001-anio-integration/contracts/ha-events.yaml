@@ -1,0 +1,48 @@
+# Home Assistant Events Contract
+# Defines events fired by the ANIO integration
+
+anio_message_received:
+  name: ANIO Message Received
+  description: Fired when a message is received from an ANIO watch
+  data:
+    device_id:
+      name: Device ID
+      description: Unique identifier of the watch
+      type: string
+      example: "4645a84ad7"
+    device_name:
+      name: Device Name
+      description: User-defined name of the watch
+      type: string
+      example: "Marla"
+    message_type:
+      name: Message Type
+      description: Type of message received
+      type: string
+      enum: [TEXT, EMOJI, VOICE]
+      example: "TEXT"
+    content:
+      name: Content
+      description: Message content (text or emoji code)
+      type: string
+      example: "Hallo Mama!"
+    sender:
+      name: Sender
+      description: Who sent the message
+      type: string
+      enum: [APP, WATCH]
+      example: "WATCH"
+    timestamp:
+      name: Timestamp
+      description: When the message was sent
+      type: string
+      format: date-time
+      example: "2026-01-22T15:30:00Z"
+
+# Example automation trigger:
+# trigger:
+#   - platform: event
+#     event_type: anio_message_received
+#     event_data:
+#       device_name: "Marla"
+#       sender: "WATCH"

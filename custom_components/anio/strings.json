@@ -1,0 +1,131 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ANIO Account",
+        "description": "Enter your ANIO account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "2fa": {
+        "title": "Two-Factor Authentication",
+        "description": "Enter the verification code sent to your email or phone.",
+        "data": {
+          "otp_code": "Verification Code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate ANIO",
+        "description": "Your session has expired. Please enter your password to continue.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password",
+      "invalid_otp": "Invalid verification code",
+      "cannot_connect": "Cannot connect to ANIO servers",
+      "unknown": "An unexpected error occurred",
+      "rate_limited": "Too many requests. Please try again later."
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Reauthentication successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ANIO Options",
+        "description": "Configure ANIO integration settings.",
+        "data": {
+          "scan_interval": "Update interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": {
+        "name": "Battery"
+      },
+      "last_seen": {
+        "name": "Last Seen"
+      },
+      "steps": {
+        "name": "Steps"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "geofence": {
+        "name": "At {geofence_name}"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Location"
+      }
+    },
+    "button": {
+      "locate": {
+        "name": "Locate"
+      },
+      "power_off": {
+        "name": "Power Off"
+      }
+    },
+    "notify": {
+      "message": {
+        "name": "Send Message"
+      }
+    }
+  },
+  "services": {
+    "send_message": {
+      "name": "Send Message",
+      "description": "Send a text or emoji message to an ANIO watch.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The target ANIO watch."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The message text to send (max 95 characters)."
+        },
+        "message_type": {
+          "name": "Message Type",
+          "description": "Type of message (text or emoji)."
+        },
+        "emoji_code": {
+          "name": "Emoji Code",
+          "description": "Emoji code (E01-E12) when message_type is emoji."
+        },
+        "username": {
+          "name": "Sender Name",
+          "description": "Name to show as sender on the watch."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "device_not_found": {
+      "message": "Device {device_id} not found"
+    },
+    "message_too_long": {
+      "message": "Message is too long ({length} characters). Maximum is {max_length} characters."
+    },
+    "invalid_emoji": {
+      "message": "Invalid emoji code. Valid codes are E01-E12."
+    },
+    "api_error": {
+      "message": "Error communicating with ANIO: {error}"
+    }
+  }
+}
