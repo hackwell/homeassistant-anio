@@ -82,6 +82,7 @@ custom_components/hacs/
 *.log
 *.tmp
 .secrets/
+ANIO_API_DOCUMENTATION.md
 
 # Local testing
 devcontainer/
