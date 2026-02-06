@@ -90,7 +90,7 @@ class ChatMessage(BaseModel):
 
     id: str
     device_id: str = Field(alias="deviceId")
-    text: str
+    text: str | None = None
     username: str | None = None
     type: Literal["TEXT", "EMOJI", "VOICE"]
     sender: Literal["APP", "WATCH", "DEVICE"]
