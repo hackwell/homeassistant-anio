@@ -88,9 +88,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             self._geofences = await self.client.get_geofences()
 
             # Fetch activity for messages and location updates
-            activity = await self.client.get_activity(
-                from_time=self._last_activity_check
-            )
+            activity = await self.client.get_activity()
             self._last_activity_check = datetime.now(timezone.utc)
 
             # Process incoming messages and fire events
