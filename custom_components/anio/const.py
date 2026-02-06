@@ -42,6 +42,7 @@ MESSAGE_TYPE_VOICE: Final = "VOICE"
 # Message sender types
 SENDER_APP: Final = "APP"
 SENDER_WATCH: Final = "WATCH"
+SENDER_DEVICE: Final = "DEVICE"
 
 # Emoji codes
 VALID_EMOJI_CODES: Final = [f"E{i:02d}" for i in range(1, 13)]  # E01-E12

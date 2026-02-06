@@ -25,6 +25,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     EVENT_MESSAGE_RECEIVED,
+    SENDER_DEVICE,
     SENDER_WATCH,
 )
 
@@ -115,11 +116,11 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     battery_level = latest.battery_level
                     signal_strength = latest.signal_strength
 
-                # Fetch chat history and find last WATCH message
+                # Fetch chat history and find last WATCH/DEVICE message
                 last_message = None
                 chat_messages = await self.client.get_chat_history(device.id)
                 for msg in reversed(chat_messages):
-                    if msg.sender == SENDER_WATCH:
+                    if msg.sender in (SENDER_WATCH, SENDER_DEVICE):
                         last_message = msg
                         break
 
