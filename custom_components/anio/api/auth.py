@@ -16,7 +16,11 @@ from .exceptions import AnioAuthError, AnioConnectionError, AnioOtpRequiredError
 from .models import AuthTokens
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
     from aiohttp import ClientSession
+
+    TokenRefreshCallback = Callable[[str, str], Coroutine[None, None, None]]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +36,7 @@ class AnioAuth:
         access_token: str | None = None,
         refresh_token: str | None = None,
         app_uuid: str | None = None,
+        on_token_refresh: TokenRefreshCallback | None = None,
     ) -> None:
         """Initialize the auth handler.
 
@@ -42,6 +47,7 @@ class AnioAuth:
             access_token: Existing access token.
             refresh_token: Existing refresh token.
             app_uuid: App UUID for API requests.
+            on_token_refresh: Callback when tokens are refreshed.
         """
         self._session = session
         self._email = email
@@ -50,6 +56,7 @@ class AnioAuth:
         self._refresh_token = refresh_token
         self._app_uuid = app_uuid or str(uuid.uuid4())
         self._token_expiry: datetime | None = None
+        self._on_token_refresh = on_token_refresh
 
         if access_token:
             self._token_expiry = self._parse_jwt_expiry(access_token)
@@ -185,6 +192,7 @@ class AnioAuth:
 
         headers = {
             "Authorization": f"Bearer {self._refresh_token}",
+            "client-id": CLIENT_ID,
             "app-uuid": self._app_uuid,
         }
 
@@ -204,9 +212,22 @@ class AnioAuth:
                 self._access_token = data.get("accessToken")
                 self._token_expiry = self._parse_jwt_expiry(self._access_token or "")
 
+                # Capture rotated refresh token if provided
+                new_refresh = data.get("refreshToken")
+                if new_refresh:
+                    self._refresh_token = new_refresh
+
                 _LOGGER.debug(
                     "Token refreshed, new expiry at %s", self._token_expiry
                 )
+
+                # Notify listeners about token update
+                if self._on_token_refresh:
+                    await self._on_token_refresh(
+                        self._access_token or "",
+                        self._refresh_token or "",
+                    )
+
                 return self._access_token or ""
 
         except aiohttp.ClientError as err:

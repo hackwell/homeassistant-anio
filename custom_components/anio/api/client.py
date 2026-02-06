@@ -17,6 +17,7 @@ from ..const import (
 )
 from .exceptions import (
     AnioApiError,
+    AnioAuthError,
     AnioConnectionError,
     AnioDeviceNotFoundError,
     AnioMessageTooLongError,
@@ -90,6 +91,9 @@ class AnioApiClient:
                     await self._handle_rate_limit(retry_after)
                     # Retry the request
                     return await self._request(method, endpoint, **kwargs)
+
+                if response.status == 401:
+                    raise AnioAuthError("Access token rejected by server")
 
                 if response.status == 404:
                     raise AnioDeviceNotFoundError("unknown")

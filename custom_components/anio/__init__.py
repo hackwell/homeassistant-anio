@@ -50,12 +50,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get the aiohttp session
     session = async_get_clientsession(hass)
 
+    async def _on_token_refresh(access_token: str, refresh_token: str) -> None:
+        """Persist refreshed tokens to the config entry."""
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_ACCESS_TOKEN: access_token,
+                CONF_REFRESH_TOKEN: refresh_token,
+            },
+        )
+        _LOGGER.debug("Persisted refreshed tokens to config entry")
+
     # Create auth handler with stored tokens
     auth = AnioAuth(
         session=session,
         access_token=entry.data.get(CONF_ACCESS_TOKEN),
         refresh_token=entry.data.get(CONF_REFRESH_TOKEN),
         app_uuid=entry.data.get(CONF_APP_UUID),
+        on_token_refresh=_on_token_refresh,
     )
 
     # Create API client
