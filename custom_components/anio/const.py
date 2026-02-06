@@ -50,6 +50,9 @@ VALID_EMOJI_CODES: Final = [f"E{i:02d}" for i in range(1, 13)]  # E01-E12
 # Event types
 EVENT_MESSAGE_RECEIVED: Final = f"{DOMAIN}_message_received"
 
+# Ring profiles
+RING_PROFILES: Final = ["RING_AND_VIBRATE", "VIBRATE_ONLY", "SILENT"]
+
 # Platforms
 PLATFORMS: Final = [
     "sensor",
@@ -57,4 +60,6 @@ PLATFORMS: Final = [
     "device_tracker",
     "button",
     "notify",
+    "switch",
+    "select",
 ]

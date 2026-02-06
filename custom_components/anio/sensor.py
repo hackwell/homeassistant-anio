@@ -38,6 +38,8 @@ async def async_setup_entry(
                 AnioLastSeenSensor(coordinator, device_id),
                 AnioSignalStrengthSensor(coordinator, device_id),
                 AnioLastMessageSensor(coordinator, device_id),
+                AnioNextAlarmSensor(coordinator, device_id),
+                AnioTrackingModeSensor(coordinator, device_id),
             ]
         )
 
@@ -64,10 +66,7 @@ class AnioBatterySensor(AnioEntity, SensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Battery"
-        return "ANIO Battery"
+        return "Battery"
 
     @property
     def native_value(self) -> int | None:
@@ -96,10 +95,7 @@ class AnioLastSeenSensor(AnioEntity, SensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Last Seen"
-        return "ANIO Last Seen"
+        return "Last Seen"
 
     @property
     def native_value(self) -> datetime | None:
@@ -130,10 +126,7 @@ class AnioSignalStrengthSensor(AnioEntity, SensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Signal Strength"
-        return "ANIO Signal Strength"
+        return "Signal Strength"
 
     @property
     def native_value(self) -> int | None:
@@ -161,10 +154,7 @@ class AnioLastMessageSensor(AnioEntity, SensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Last Message"
-        return "ANIO Last Message"
+        return "Last Message"
 
     @property
     def native_value(self) -> str | None:
@@ -186,4 +176,87 @@ class AnioLastMessageSensor(AnioEntity, SensorEntity):
                 "created_at": msg.created_at.isoformat(),
                 "is_read": msg.is_read,
             }
+        return None
+
+
+class AnioNextAlarmSensor(AnioEntity, SensorEntity):
+    """Sensor entity for the next alarm on the ANIO watch."""
+
+    _attr_icon = "mdi:alarm"
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        device_id: str,
+    ) -> None:
+        """Initialize the next alarm sensor."""
+        super().__init__(coordinator, device_id)
+        self._attr_unique_id = f"{device_id}_next_alarm"
+
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        return "Next Alarm"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the next enabled alarm time."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if not device_state:
+            return None
+
+        enabled_alarms = [a for a in device_state.alarms if a.enabled]
+        if not enabled_alarms:
+            return None
+
+        # Sort by time and return the earliest
+        enabled_alarms.sort(key=lambda a: a.time)
+        return enabled_alarms[0].time
+
+    @property
+    def extra_state_attributes(self) -> dict[str, int | str | None] | None:
+        """Return additional alarm attributes."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if not device_state:
+            return None
+
+        enabled_alarms = [a for a in device_state.alarms if a.enabled]
+        next_alarm = None
+        if enabled_alarms:
+            enabled_alarms.sort(key=lambda a: a.time)
+            next_alarm = enabled_alarms[0]
+
+        return {
+            "alarm_count": len(device_state.alarms),
+            "enabled_count": len(enabled_alarms),
+            "next_alarm_days": ", ".join(next_alarm.days) if next_alarm else None,
+        }
+
+
+class AnioTrackingModeSensor(AnioEntity, SensorEntity):
+    """Sensor entity for the ANIO watch tracking mode."""
+
+    _attr_icon = "mdi:crosshairs-gps"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        device_id: str,
+    ) -> None:
+        """Initialize the tracking mode sensor."""
+        super().__init__(coordinator, device_id)
+        self._attr_unique_id = f"{device_id}_tracking_mode"
+
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        return "Tracking Mode"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the current tracking mode."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if device_state:
+            return device_state.tracking_mode
         return None

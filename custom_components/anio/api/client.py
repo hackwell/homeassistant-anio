@@ -22,7 +22,16 @@ from .exceptions import (
     AnioMessageTooLongError,
     AnioRateLimitError,
 )
-from .models import ActivityItem, ChatMessage, Device, DeviceLocation, Geofence, LocationInfo
+from .models import (
+    ActivityItem,
+    AlarmClock,
+    ChatMessage,
+    Device,
+    DeviceLocation,
+    Geofence,
+    LocationInfo,
+    SilenceTime,
+)
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -361,3 +370,138 @@ class AnioApiClient:
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No chat history for device %s (404)", device_id)
             return []
+
+    async def get_alarms(self, device_id: str) -> list[AlarmClock]:
+        """Get alarm clocks for a device.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            List of alarm clocks, empty on error.
+        """
+        try:
+            data = await self._request("GET", f"/v1/alarm-clock/{device_id}")
+            if not isinstance(data, list):
+                return []
+
+            result = []
+            for item in data:
+                try:
+                    result.append(AlarmClock.model_validate(item))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Failed to parse alarm clock: %s", err)
+            return result
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No alarms for device %s (404)", device_id)
+            return []
+
+    async def create_alarm(
+        self,
+        device_id: str,
+        time: str,
+        days: list[str],
+    ) -> AlarmClock | None:
+        """Create an alarm clock for a device.
+
+        Args:
+            device_id: The device ID.
+            time: Alarm time in HH:MM format.
+            days: List of day codes (e.g. ["MON", "TUE"]).
+
+        Returns:
+            The created alarm, or None on failure.
+        """
+        payload = {
+            "deviceId": device_id,
+            "time": time,
+            "days": days,
+        }
+        data = await self._request("POST", "/v1/alarm-clock", json=payload)
+        if isinstance(data, dict):
+            return AlarmClock.model_validate(data)
+        return None
+
+    async def delete_alarm(self, alarm_id: str) -> None:
+        """Delete an alarm clock.
+
+        Args:
+            alarm_id: The alarm ID.
+        """
+        await self._request("DELETE", f"/v1/alarm-clock/{alarm_id}")
+
+    async def get_silence_times(self, device_id: str) -> list[SilenceTime]:
+        """Get silence time entries for a device.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            List of silence times, empty on error.
+        """
+        try:
+            data = await self._request("GET", f"/v1/silence-time/{device_id}")
+            if not isinstance(data, list):
+                return []
+
+            result = []
+            for item in data:
+                try:
+                    result.append(SilenceTime.model_validate(item))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Failed to parse silence time: %s", err)
+            return result
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No silence times for device %s (404)", device_id)
+            return []
+
+    async def enable_silence_times(self, device_id: str) -> None:
+        """Enable all silence times for a device.
+
+        Args:
+            device_id: The device ID.
+        """
+        await self._request("POST", f"/v1/silence-time/{device_id}/enable")
+
+    async def disable_silence_times(self, device_id: str) -> None:
+        """Disable all silence times for a device.
+
+        Args:
+            device_id: The device ID.
+        """
+        await self._request("POST", f"/v1/silence-time/{device_id}/disable")
+
+    async def get_tracking_mode(self, device_id: str) -> str | None:
+        """Get the tracking mode for a device.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            Tracking mode string, or None if unavailable.
+        """
+        try:
+            data = await self._request(
+                "GET", f"/v1/device/{device_id}/trackingMode"
+            )
+            if isinstance(data, str):
+                return data
+            if isinstance(data, dict):
+                return data.get("trackingMode") or data.get("mode")
+            return None
+        except (AnioDeviceNotFoundError, AnioApiError):
+            _LOGGER.debug("No tracking mode for device %s", device_id)
+            return None
+
+    async def update_device_settings(
+        self, device_id: str, **kwargs: str | int | bool
+    ) -> None:
+        """Update device settings.
+
+        Args:
+            device_id: The device ID.
+            **kwargs: Settings to update (e.g. ringProfile="SILENT").
+        """
+        await self._request(
+            "PATCH", f"/v1/device/{device_id}/settings", json=kwargs
+        )

@@ -227,6 +227,8 @@ class TestDomainData:
             "device_tracker",
             "button",
             "notify",
+            "switch",
+            "select",
         ]
         assert set(PLATFORMS) == set(expected_platforms)
 

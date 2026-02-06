@@ -176,6 +176,32 @@ class ActivityItem(BaseModel):
     data: dict | None = None
 
 
+class AlarmClock(BaseModel):
+    """Alarm clock entry from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    device_id: str = Field(default="", alias="deviceId")
+    time: str = Field(default="00:00")
+    days: list[str] = Field(default_factory=list)
+    enabled: bool = Field(default=True)
+    label: str | None = None
+
+
+class SilenceTime(BaseModel):
+    """Silence time entry from the ANIO API."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    device_id: str = Field(default="", alias="deviceId")
+    start_time: str = Field(default="00:00", alias="startTime")
+    end_time: str = Field(default="00:00", alias="endTime")
+    days: list[str] = Field(default_factory=list)
+    enabled: bool = Field(default=True)
+
+
 class AnioDeviceState(BaseModel):
     """Combined state for an ANIO device."""
 
@@ -189,6 +215,9 @@ class AnioDeviceState(BaseModel):
     battery_level_value: int = 0
     signal_strength: int = 0
     last_message: ChatMessage | None = None
+    alarms: list[AlarmClock] = Field(default_factory=list)
+    silence_times: list[SilenceTime] = Field(default_factory=list)
+    tracking_mode: str | None = None
 
     @property
     def battery_level(self) -> int:

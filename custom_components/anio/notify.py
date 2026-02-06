@@ -62,10 +62,7 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
     @property
     def name(self) -> str:
         """Return the name of the entity."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Message"
-        return "ANIO Message"
+        return "Message"
 
     async def async_send_message(
         self,

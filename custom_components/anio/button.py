@@ -69,10 +69,7 @@ class AnioLocateButton(AnioEntity, ButtonEntity):
     @property
     def name(self) -> str:
         """Return the name of the button."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Locate"
-        return "ANIO Locate"
+        return "Locate"
 
     async def async_press(self) -> None:
         """Handle the button press."""
@@ -113,10 +110,7 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
     @property
     def name(self) -> str:
         """Return the name of the button."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Power Off"
-        return "ANIO Power Off"
+        return "Power Off"
 
     async def async_press(self) -> None:
         """Handle the button press."""
@@ -155,10 +149,7 @@ class AnioFlowerButton(AnioEntity, ButtonEntity):
     @property
     def name(self) -> str:
         """Return the name of the button."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Flower"
-        return "ANIO Flower"
+        return "Flower"
 
     async def async_press(self) -> None:
         """Handle the button press."""

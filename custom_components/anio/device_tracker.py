@@ -52,10 +52,7 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
     @property
     def name(self) -> str:
         """Return the name of the tracker."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Location"
-        return "ANIO Location"
+        return "Location"
 
     @property
     def source_type(self) -> SourceType:

@@ -13,6 +13,7 @@ from .exceptions import (
 )
 from .models import (
     ActivityItem,
+    AlarmClock,
     AnioDeviceState,
     AuthTokens,
     ChatMessage,
@@ -22,6 +23,7 @@ from .models import (
     DeviceSettings,
     Geofence,
     LocationInfo,
+    SilenceTime,
     UserInfo,
 )
 
@@ -40,6 +42,7 @@ __all__ = [
     "AnioRateLimitError",
     # Models
     "ActivityItem",
+    "AlarmClock",
     "AnioDeviceState",
     "AuthTokens",
     "ChatMessage",
@@ -49,5 +52,6 @@ __all__ = [
     "DeviceSettings",
     "Geofence",
     "LocationInfo",
+    "SilenceTime",
     "UserInfo",
 ]
