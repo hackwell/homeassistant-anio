@@ -93,7 +93,7 @@ class ChatMessage(BaseModel):
     text: str
     username: str | None = None
     type: Literal["TEXT", "EMOJI", "VOICE"]
-    sender: Literal["APP", "WATCH"]
+    sender: Literal["APP", "WATCH", "DEVICE"]
     is_received: bool = Field(default=False, alias="isReceived")
     is_read: bool = Field(default=False, alias="isRead")
     created_at: datetime = Field(alias="createdAt")
