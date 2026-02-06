@@ -325,13 +325,16 @@ class AnioApiClient:
             _LOGGER.debug("No last location for device %s (404)", device_id)
             return None
 
-    async def send_flower(self, device_id: str) -> None:
+    async def send_flower(self, device_id: str, amount: int = 1) -> None:
         """Send a flower (praise) to a device.
 
         Args:
             device_id: The device ID.
+            amount: Number of flowers to send (0-99).
         """
-        await self._request("POST", f"/v1/device/{device_id}/flower")
+        await self._request(
+            "POST", f"/v1/device/{device_id}/flower", json={"amount": amount}
+        )
         _LOGGER.debug("Flower sent to device %s", device_id)
 
     async def get_chat_history(self, device_id: str) -> list[ChatMessage]:
