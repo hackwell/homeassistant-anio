@@ -37,6 +37,7 @@ def hass() -> HomeAssistant:
     return hass
 
 from custom_components.anio.api import (
+    AlarmClock,
     AnioApiClient,
     AnioAuth,
     AnioDeviceState,
@@ -46,6 +47,7 @@ from custom_components.anio.api import (
     DeviceSettings,
     Geofence,
     LocationInfo,
+    SilenceTime,
     UserInfo,
 )
 from custom_components.anio.const import (
@@ -150,11 +152,39 @@ def mock_chat_message() -> ChatMessage:
 
 
 @pytest.fixture
+def mock_alarm() -> AlarmClock:
+    """Create a mock alarm clock."""
+    return AlarmClock(
+        id="alarm123",
+        deviceId=TEST_DEVICE_ID,
+        time="07:30",
+        days=["MON", "TUE", "WED", "THU", "FRI"],
+        enabled=True,
+        label="School",
+    )
+
+
+@pytest.fixture
+def mock_silence_time() -> SilenceTime:
+    """Create a mock silence time."""
+    return SilenceTime(
+        id="silence123",
+        deviceId=TEST_DEVICE_ID,
+        startTime="22:00",
+        endTime="07:00",
+        days=["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+        enabled=True,
+    )
+
+
+@pytest.fixture
 def mock_device_state(
     mock_device: Device,
     mock_location: LocationInfo,
     mock_geofence: Geofence,
     mock_chat_message: ChatMessage,
+    mock_alarm: AlarmClock,
+    mock_silence_time: SilenceTime,
 ) -> AnioDeviceState:
     """Create mock device state."""
     return AnioDeviceState(
@@ -166,6 +196,9 @@ def mock_device_state(
         battery_level_value=85,
         signal_strength=60,
         last_message=mock_chat_message,
+        alarms=[mock_alarm],
+        silence_times=[mock_silence_time],
+        tracking_mode="NORMAL",
     )
 
 
@@ -204,6 +237,14 @@ def mock_api_client(
     client.power_off_device = AsyncMock()
     client.send_text_message = AsyncMock()
     client.send_emoji_message = AsyncMock()
+    client.get_alarms = AsyncMock(return_value=[])
+    client.create_alarm = AsyncMock(return_value=None)
+    client.delete_alarm = AsyncMock()
+    client.get_silence_times = AsyncMock(return_value=[])
+    client.enable_silence_times = AsyncMock()
+    client.disable_silence_times = AsyncMock()
+    client.get_tracking_mode = AsyncMock(return_value=None)
+    client.update_device_settings = AsyncMock()
     yield client
 
 

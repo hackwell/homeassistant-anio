@@ -369,6 +369,9 @@ class TestFullDataFlow:
         mock_client.get_activity = AsyncMock(return_value=[])
         mock_client.get_last_location = AsyncMock(return_value=last_location)
         mock_client.get_chat_history = AsyncMock(return_value=[])
+        mock_client.get_alarms = AsyncMock(return_value=[])
+        mock_client.get_silence_times = AsyncMock(return_value=[])
+        mock_client.get_tracking_mode = AsyncMock(return_value=None)
 
         coordinator = AnioDataUpdateCoordinator(
             hass=hass,

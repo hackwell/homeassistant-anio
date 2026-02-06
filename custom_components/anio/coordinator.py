@@ -124,6 +124,11 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                         last_message = msg
                         break
 
+                # Fetch alarms, silence times, and tracking mode
+                alarms = await self.client.get_alarms(device.id)
+                silence_times = await self.client.get_silence_times(device.id)
+                tracking_mode = await self.client.get_tracking_mode(device.id)
+
                 is_online = self._calculate_online_status(last_seen)
 
                 state = AnioDeviceState(
@@ -135,6 +140,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     battery_level_value=battery_level,
                     signal_strength=signal_strength,
                     last_message=last_message,
+                    alarms=alarms,
+                    silence_times=silence_times,
+                    tracking_mode=tracking_mode,
                 )
                 result[device.id] = state
 

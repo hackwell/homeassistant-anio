@@ -15,7 +15,9 @@ from custom_components.anio.sensor import (
     AnioBatterySensor,
     AnioLastMessageSensor,
     AnioLastSeenSensor,
+    AnioNextAlarmSensor,
     AnioSignalStrengthSensor,
+    AnioTrackingModeSensor,
     async_setup_entry,
 )
 
@@ -45,7 +47,7 @@ class TestAnioBatterySensor:
 
     def test_name(self, battery_sensor: AnioBatterySensor) -> None:
         """Test sensor name."""
-        assert battery_sensor.name == f"{TEST_DEVICE_NAME} Battery"
+        assert battery_sensor.name == "Battery"
 
     def test_device_class(self, battery_sensor: AnioBatterySensor) -> None:
         """Test device class."""
@@ -102,7 +104,7 @@ class TestAnioLastSeenSensor:
 
     def test_name(self, last_seen_sensor: AnioLastSeenSensor) -> None:
         """Test sensor name."""
-        assert last_seen_sensor.name == f"{TEST_DEVICE_NAME} Last Seen"
+        assert last_seen_sensor.name == "Last Seen"
 
     def test_device_class(self, last_seen_sensor: AnioLastSeenSensor) -> None:
         """Test device class."""
@@ -156,12 +158,14 @@ class TestSensorSetup:
 
         await async_setup_entry(hass, mock_config_entry, add_entities)
 
-        # Should create battery, last_seen, signal_strength, last_message sensors per device
-        assert len(entities) == 4
+        # Should create 6 sensors per device
+        assert len(entities) == 6
         assert any(isinstance(e, AnioBatterySensor) for e in entities)
         assert any(isinstance(e, AnioLastSeenSensor) for e in entities)
         assert any(isinstance(e, AnioSignalStrengthSensor) for e in entities)
         assert any(isinstance(e, AnioLastMessageSensor) for e in entities)
+        assert any(isinstance(e, AnioNextAlarmSensor) for e in entities)
+        assert any(isinstance(e, AnioTrackingModeSensor) for e in entities)
 
     @pytest.mark.asyncio
     async def test_async_setup_entry_no_devices(
@@ -212,7 +216,7 @@ class TestAnioSignalStrengthSensor:
 
     def test_name(self, signal_sensor: AnioSignalStrengthSensor) -> None:
         """Test sensor name."""
-        assert signal_sensor.name == f"{TEST_DEVICE_NAME} Signal Strength"
+        assert signal_sensor.name == "Signal Strength"
 
     def test_icon(self, signal_sensor: AnioSignalStrengthSensor) -> None:
         """Test sensor icon."""
@@ -268,7 +272,7 @@ class TestAnioLastMessageSensor:
 
     def test_name(self, message_sensor: AnioLastMessageSensor) -> None:
         """Test sensor name."""
-        assert message_sensor.name == f"{TEST_DEVICE_NAME} Last Message"
+        assert message_sensor.name == "Last Message"
 
     def test_icon(self, message_sensor: AnioLastMessageSensor) -> None:
         """Test sensor icon."""
@@ -297,3 +301,104 @@ class TestAnioLastMessageSensor:
         )
         assert sensor.native_value is None
         assert sensor.extra_state_attributes is None
+
+
+class TestAnioNextAlarmSensor:
+    """Tests for AnioNextAlarmSensor."""
+
+    @pytest.fixture
+    def alarm_sensor(
+        self,
+        hass: HomeAssistant,
+        mock_coordinator_data: dict,
+    ) -> AnioNextAlarmSensor:
+        """Create a next alarm sensor for testing."""
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        return AnioNextAlarmSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+
+    def test_unique_id(self, alarm_sensor: AnioNextAlarmSensor) -> None:
+        """Test unique ID format."""
+        assert alarm_sensor.unique_id == f"{TEST_DEVICE_ID}_next_alarm"
+
+    def test_name(self, alarm_sensor: AnioNextAlarmSensor) -> None:
+        """Test sensor name."""
+        assert alarm_sensor.name == "Next Alarm"
+
+    def test_icon(self, alarm_sensor: AnioNextAlarmSensor) -> None:
+        """Test sensor icon."""
+        assert alarm_sensor.icon == "mdi:alarm"
+
+    def test_native_value(self, alarm_sensor: AnioNextAlarmSensor) -> None:
+        """Test next alarm value from coordinator data."""
+        assert alarm_sensor.native_value == "07:30"
+
+    def test_extra_state_attributes(self, alarm_sensor: AnioNextAlarmSensor) -> None:
+        """Test extra state attributes contain alarm metadata."""
+        attrs = alarm_sensor.extra_state_attributes
+        assert attrs is not None
+        assert attrs["alarm_count"] == 1
+        assert attrs["enabled_count"] == 1
+        assert "MON" in attrs["next_alarm_days"]
+
+    def test_native_value_no_data(self, hass: HomeAssistant) -> None:
+        """Test next alarm value when no data available."""
+        coordinator = MagicMock()
+        coordinator.data = {}
+        sensor = AnioNextAlarmSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+        assert sensor.native_value is None
+
+
+class TestAnioTrackingModeSensor:
+    """Tests for AnioTrackingModeSensor."""
+
+    @pytest.fixture
+    def tracking_sensor(
+        self,
+        hass: HomeAssistant,
+        mock_coordinator_data: dict,
+    ) -> AnioTrackingModeSensor:
+        """Create a tracking mode sensor for testing."""
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        return AnioTrackingModeSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+
+    def test_unique_id(self, tracking_sensor: AnioTrackingModeSensor) -> None:
+        """Test unique ID format."""
+        assert tracking_sensor.unique_id == f"{TEST_DEVICE_ID}_tracking_mode"
+
+    def test_name(self, tracking_sensor: AnioTrackingModeSensor) -> None:
+        """Test sensor name."""
+        assert tracking_sensor.name == "Tracking Mode"
+
+    def test_icon(self, tracking_sensor: AnioTrackingModeSensor) -> None:
+        """Test sensor icon."""
+        assert tracking_sensor.icon == "mdi:crosshairs-gps"
+
+    def test_entity_category(self, tracking_sensor: AnioTrackingModeSensor) -> None:
+        """Test entity category."""
+        from homeassistant.const import EntityCategory
+        assert tracking_sensor.entity_category == EntityCategory.DIAGNOSTIC
+
+    def test_native_value(self, tracking_sensor: AnioTrackingModeSensor) -> None:
+        """Test tracking mode value from coordinator data."""
+        assert tracking_sensor.native_value == "NORMAL"
+
+    def test_native_value_no_data(self, hass: HomeAssistant) -> None:
+        """Test tracking mode value when no data available."""
+        coordinator = MagicMock()
+        coordinator.data = {}
+        sensor = AnioTrackingModeSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+        assert sensor.native_value is None

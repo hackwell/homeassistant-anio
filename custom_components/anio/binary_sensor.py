@@ -62,10 +62,7 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return f"{device_state.device.settings.name} Online"
-        return "ANIO Online"
+        return "Online"
 
     @property
     def is_on(self) -> bool | None:
@@ -94,11 +91,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        device_state = self.coordinator.data.get(self._device_id)
-        device_name = "ANIO"
-        if device_state:
-            device_name = device_state.device.settings.name
-        return f"{device_name} at {self._geofence.name}"
+        return f"At {self._geofence.name}"
 
     @property
     def is_on(self) -> bool | None:
