@@ -127,6 +127,32 @@ class Geofence(BaseModel):
         return v
 
 
+class DeviceLocation(BaseModel):
+    """Location entry from /v1/location/{deviceId}."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    position: list[float]
+    battery_level: int = Field(alias="batteryLevel")
+    signal_strength: int = Field(alias="signalStrength")
+    position_determined_by: str = Field(alias="positionDeterminedBy")
+    date: datetime
+    last_response: datetime = Field(alias="lastResponse")
+    speed: int = 0
+    direction: int = 0
+    device_id: str = Field(alias="deviceId")
+
+    @property
+    def latitude(self) -> float:
+        """Get latitude from position array."""
+        return self.position[0]
+
+    @property
+    def longitude(self) -> float:
+        """Get longitude from position array."""
+        return self.position[1]
+
+
 class LocationInfo(BaseModel):
     """Location information from the ANIO API."""
 
@@ -160,16 +186,14 @@ class AnioDeviceState(BaseModel):
     geofences: list[Geofence] = Field(default_factory=list)
     last_seen: datetime | None = None
     is_online: bool = False
+    battery_level_value: int = 0
+    signal_strength: int = 0
+    last_message: ChatMessage | None = None
 
     @property
     def battery_level(self) -> int:
-        """Get battery level."""
-        return self.device.settings.battery
-
-    @property
-    def step_count(self) -> int:
-        """Get step count."""
-        return self.device.settings.step_count
+        """Get battery level from location data."""
+        return self.battery_level_value
 
     @property
     def name(self) -> str:

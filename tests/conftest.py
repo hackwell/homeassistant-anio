@@ -40,6 +40,7 @@ from custom_components.anio.api import (
     AnioApiClient,
     AnioAuth,
     AnioDeviceState,
+    ChatMessage,
     Device,
     DeviceConfig,
     DeviceSettings,
@@ -134,10 +135,26 @@ def mock_geofence() -> Geofence:
 
 
 @pytest.fixture
+def mock_chat_message() -> ChatMessage:
+    """Create a mock chat message from the watch."""
+    return ChatMessage(
+        id="msg123",
+        deviceId=TEST_DEVICE_ID,
+        text="Hi Mom!",
+        type="TEXT",
+        sender="WATCH",
+        isReceived=True,
+        isRead=False,
+        createdAt=datetime.now(timezone.utc),
+    )
+
+
+@pytest.fixture
 def mock_device_state(
     mock_device: Device,
     mock_location: LocationInfo,
     mock_geofence: Geofence,
+    mock_chat_message: ChatMessage,
 ) -> AnioDeviceState:
     """Create mock device state."""
     return AnioDeviceState(
@@ -146,6 +163,9 @@ def mock_device_state(
         geofences=[mock_geofence],
         last_seen=datetime.now(timezone.utc),
         is_online=True,
+        battery_level_value=85,
+        signal_strength=60,
+        last_message=mock_chat_message,
     )
 
 
@@ -176,6 +196,10 @@ def mock_api_client(
     client.get_device = AsyncMock(return_value=mock_device)
     client.get_geofences = AsyncMock(return_value=[mock_geofence])
     client.get_activity = AsyncMock(return_value=[])
+    client.get_device_locations = AsyncMock(return_value=[])
+    client.get_last_location = AsyncMock(return_value=None)
+    client.send_flower = AsyncMock()
+    client.get_chat_history = AsyncMock(return_value=[])
     client.find_device = AsyncMock()
     client.power_off_device = AsyncMock()
     client.send_text_message = AsyncMock()

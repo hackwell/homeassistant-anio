@@ -36,6 +36,7 @@ async def async_setup_entry(
             [
                 AnioLocateButton(coordinator, client, device_id),
                 AnioPowerOffButton(coordinator, client, device_id),
+                AnioFlowerButton(coordinator, client, device_id),
             ]
         )
 
@@ -127,3 +128,39 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
         await self._client.power_off_device(self._device_id)
 
         _LOGGER.info("Power off command sent to device %s", self._device_id)
+
+
+class AnioFlowerButton(AnioEntity, ButtonEntity):
+    """Button entity for sending a flower (praise) to the ANIO watch."""
+
+    _attr_icon = "mdi:flower"
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        client: AnioApiClient,
+        device_id: str,
+    ) -> None:
+        """Initialize the flower button.
+
+        Args:
+            coordinator: The data update coordinator.
+            client: The ANIO API client.
+            device_id: The ANIO device ID.
+        """
+        super().__init__(coordinator, device_id)
+        self._client = client
+        self._attr_unique_id = f"{device_id}_flower"
+
+    @property
+    def name(self) -> str:
+        """Return the name of the button."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if device_state:
+            return f"{device_state.device.settings.name} Flower"
+        return "ANIO Flower"
+
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        _LOGGER.debug("Sending flower to device %s", self._device_id)
+        await self._client.send_flower(self._device_id)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -37,7 +36,8 @@ async def async_setup_entry(
             [
                 AnioBatterySensor(coordinator, device_id),
                 AnioLastSeenSensor(coordinator, device_id),
-                AnioStepsSensor(coordinator, device_id),
+                AnioSignalStrengthSensor(coordinator, device_id),
+                AnioLastMessageSensor(coordinator, device_id),
             ]
         )
 
@@ -74,7 +74,7 @@ class AnioBatterySensor(AnioEntity, SensorEntity):
         """Return the battery level."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state:
-            return device_state.device.settings.battery
+            return device_state.battery_level
         return None
 
 
@@ -110,44 +110,80 @@ class AnioLastSeenSensor(AnioEntity, SensorEntity):
         return None
 
 
-class AnioStepsSensor(AnioEntity, SensorEntity):
-    """Sensor entity for ANIO watch step counter."""
+class AnioSignalStrengthSensor(AnioEntity, SensorEntity):
+    """Sensor entity for ANIO watch signal strength."""
 
-    _attr_icon = "mdi:walk"
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_native_unit_of_measurement = "steps"
+    _attr_icon = "mdi:signal"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
         self,
         coordinator: AnioDataUpdateCoordinator,
         device_id: str,
     ) -> None:
-        """Initialize the steps sensor."""
+        """Initialize the signal strength sensor."""
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"{device_id}_steps"
+        self._attr_unique_id = f"{device_id}_signal_strength"
 
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state:
-            return f"{device_state.device.settings.name} Steps"
-        return "ANIO Steps"
+            return f"{device_state.device.settings.name} Signal Strength"
+        return "ANIO Signal Strength"
 
     @property
     def native_value(self) -> int | None:
-        """Return the current step count."""
+        """Return the signal strength."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state:
-            return device_state.device.settings.step_count
+            return device_state.signal_strength
+        return None
+
+
+class AnioLastMessageSensor(AnioEntity, SensorEntity):
+    """Sensor entity for the last message received from the ANIO watch."""
+
+    _attr_icon = "mdi:message-text"
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        device_id: str,
+    ) -> None:
+        """Initialize the last message sensor."""
+        super().__init__(coordinator, device_id)
+        self._attr_unique_id = f"{device_id}_last_message"
+
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if device_state:
+            return f"{device_state.device.settings.name} Last Message"
+        return "ANIO Last Message"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the last message text."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if device_state and device_state.last_message:
+            return device_state.last_message.text
         return None
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return additional state attributes."""
+    def extra_state_attributes(self) -> dict[str, str | bool | None] | None:
+        """Return additional message attributes."""
         device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
+        if device_state and device_state.last_message:
+            msg = device_state.last_message
             return {
-                "step_target": device_state.device.settings.step_target,
+                "sender": msg.sender,
+                "type": msg.type,
+                "created_at": msg.created_at.isoformat(),
+                "is_read": msg.is_read,
             }
         return None
