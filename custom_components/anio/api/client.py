@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -255,23 +254,13 @@ class AnioApiClient:
         data = await self._request("POST", "/v1/chat/message/emoji", json=payload)
         return ChatMessage.model_validate(data)
 
-    async def get_activity(
-        self,
-        from_time: datetime | None = None,
-    ) -> list[ActivityItem]:
+    async def get_activity(self) -> list[ActivityItem]:
         """Get activity feed including messages.
-
-        Args:
-            from_time: Optional start time for activity feed.
 
         Returns:
             List of activity items.
         """
-        params = {}
-        if from_time:
-            params["from"] = from_time.isoformat()
-
-        data = await self._request("GET", "/v1/activity", params=params)
+        data = await self._request("GET", "/v1/activity")
         if not isinstance(data, list):
             return []
 
