@@ -330,6 +330,22 @@ class TestFullDataFlow:
             "radius": 100,
         }
 
+    @pytest.fixture
+    def mock_location_raw(self) -> dict:
+        """Raw location dict as returned by /v1/location/{deviceId}/last."""
+        now = datetime.now(timezone.utc)
+        return {
+            "position": [52.5200, 13.4050],
+            "batteryLevel": 92,
+            "signalStrength": 60,
+            "positionDeterminedBy": "GPS",
+            "date": (now - timedelta(minutes=2)).isoformat(),
+            "lastResponse": now.isoformat(),
+            "speed": 0,
+            "direction": 0,
+            "deviceId": TEST_DEVICE_ID,
+        }
+
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.frame.report_usage")
     async def test_data_flows_from_api_to_state(
@@ -338,15 +354,21 @@ class TestFullDataFlow:
         hass: MagicMock,
         mock_device_raw: dict,
         mock_geofence_raw: dict,
+        mock_location_raw: dict,
     ) -> None:
-        """Verify device state is populated with battery, steps, name, online, geofences."""
+        """Verify device state is populated with battery, location, name, online, geofences."""
+        from custom_components.anio.api.models import DeviceLocation
+
         device = Device.model_validate(mock_device_raw)
         geofence = Geofence.model_validate(mock_geofence_raw)
+        last_location = DeviceLocation.model_validate(mock_location_raw)
 
         mock_client = AsyncMock(spec=AnioApiClient)
         mock_client.get_devices = AsyncMock(return_value=[device])
         mock_client.get_geofences = AsyncMock(return_value=[geofence])
         mock_client.get_activity = AsyncMock(return_value=[])
+        mock_client.get_last_location = AsyncMock(return_value=last_location)
+        mock_client.get_chat_history = AsyncMock(return_value=[])
 
         coordinator = AnioDataUpdateCoordinator(
             hass=hass,
@@ -360,10 +382,14 @@ class TestFullDataFlow:
 
         # Verify key device attributes
         assert state.name == TEST_DEVICE_NAME
-        assert state.battery_level == 85
-        assert state.step_count == 5432
-        # No activity → offline
-        assert state.is_online is False
+        assert state.battery_level == 92
+        # Location from /v1/location endpoint
+        assert state.location is not None
+        assert state.location.latitude == 52.5200
+        assert state.location.longitude == 13.4050
+        # Has lastResponse → online
+        assert state.is_online is True
+        assert state.signal_strength == 60
         # Geofences are present
         assert len(coordinator.geofences) == 1
         assert coordinator.geofences[0].name == "Home"

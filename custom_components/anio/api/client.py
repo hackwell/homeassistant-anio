@@ -22,7 +22,7 @@ from .exceptions import (
     AnioMessageTooLongError,
     AnioRateLimitError,
 )
-from .models import ActivityItem, ChatMessage, Device, Geofence, LocationInfo
+from .models import ActivityItem, ChatMessage, Device, DeviceLocation, Geofence, LocationInfo
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -289,26 +289,65 @@ class AnioApiClient:
             _LOGGER.debug("No geofences found (404 response)")
             return []
 
-    async def get_device_location(self, device_id: str) -> LocationInfo | None:
-        """Get the current location of a device.
-
-        This is typically included in the device activity feed.
+    async def get_device_locations(self, device_id: str) -> list[DeviceLocation]:
+        """Get location entries for a device.
 
         Args:
             device_id: The device ID.
 
         Returns:
-            Location info or None if not available.
+            List of location entries, empty on 404.
         """
-        # Location is usually obtained from activity feed
-        # This is a placeholder for direct location query if available
-        activity = await self.get_activity()
+        try:
+            data = await self._request("GET", f"/v1/location/{device_id}")
+            if not isinstance(data, list):
+                return []
+            return [DeviceLocation.model_validate(loc) for loc in data]
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No location data for device %s (404)", device_id)
+            return []
 
-        for item in activity:
-            if item.device_id == device_id and item.type == "LOCATION" and item.data:
-                try:
-                    return LocationInfo.model_validate(item.data)
-                except Exception as err:  # noqa: BLE001
-                    _LOGGER.debug("Failed to parse location: %s", err)
+    async def get_last_location(self, device_id: str) -> DeviceLocation | None:
+        """Get the most recent location for a device.
 
-        return None
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            The last location entry, or None if unavailable.
+        """
+        try:
+            data = await self._request("GET", f"/v1/location/{device_id}/last")
+            if not isinstance(data, dict):
+                return None
+            return DeviceLocation.model_validate(data)
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No last location for device %s (404)", device_id)
+            return None
+
+    async def send_flower(self, device_id: str) -> None:
+        """Send a flower (praise) to a device.
+
+        Args:
+            device_id: The device ID.
+        """
+        await self._request("POST", f"/v1/device/{device_id}/flower")
+        _LOGGER.debug("Flower sent to device %s", device_id)
+
+    async def get_chat_history(self, device_id: str) -> list[ChatMessage]:
+        """Get chat history for a device.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            List of chat messages, empty on 404.
+        """
+        try:
+            data = await self._request("GET", f"/v1/chat/{device_id}")
+            if not isinstance(data, list):
+                return []
+            return [ChatMessage.model_validate(msg) for msg in data]
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No chat history for device %s (404)", device_id)
+            return []

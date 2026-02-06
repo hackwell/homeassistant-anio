@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.anio.api import AnioApiError
 from custom_components.anio.button import (
+    AnioFlowerButton,
     AnioLocateButton,
     AnioPowerOffButton,
     async_setup_entry,
@@ -174,10 +175,11 @@ class TestButtonSetup:
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-        # Should create locate and power_off buttons per device
-        assert len(entities) == 2
+        # Should create locate, power_off, and flower buttons per device
+        assert len(entities) == 3
         assert any(isinstance(e, AnioLocateButton) for e in entities)
         assert any(isinstance(e, AnioPowerOffButton) for e in entities)
+        assert any(isinstance(e, AnioFlowerButton) for e in entities)
 
     @pytest.mark.asyncio
     async def test_async_setup_entry_no_devices(
@@ -241,5 +243,64 @@ class TestButtonSetup:
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-        # 2 buttons per device (locate + power_off)
-        assert len(entities) == 4
+        # 3 buttons per device (locate + power_off + flower)
+        assert len(entities) == 6
+
+
+class TestAnioFlowerButton:
+    """Tests for AnioFlowerButton."""
+
+    @pytest.fixture
+    def flower_button(
+        self,
+        hass: HomeAssistant,
+        mock_coordinator_data: dict,
+        mock_api_client: AsyncMock,
+    ) -> AnioFlowerButton:
+        """Create a flower button for testing."""
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        return AnioFlowerButton(
+            coordinator=coordinator,
+            client=mock_api_client,
+            device_id=TEST_DEVICE_ID,
+        )
+
+    def test_unique_id(self, flower_button: AnioFlowerButton) -> None:
+        """Test unique ID format."""
+        assert flower_button.unique_id == f"{TEST_DEVICE_ID}_flower"
+
+    def test_name(self, flower_button: AnioFlowerButton) -> None:
+        """Test button name."""
+        assert flower_button.name == f"{TEST_DEVICE_NAME} Flower"
+
+    def test_icon(self, flower_button: AnioFlowerButton) -> None:
+        """Test button icon."""
+        assert flower_button.icon == "mdi:flower"
+
+    def test_entity_category(self, flower_button: AnioFlowerButton) -> None:
+        """Test entity category is None (user-facing action)."""
+        assert flower_button.entity_category is None
+
+    @pytest.mark.asyncio
+    async def test_async_press(
+        self,
+        flower_button: AnioFlowerButton,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test pressing the flower button."""
+        await flower_button.async_press()
+        mock_api_client.send_flower.assert_called_once_with(TEST_DEVICE_ID)
+
+    @pytest.mark.asyncio
+    async def test_async_press_api_error(
+        self,
+        flower_button: AnioFlowerButton,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test API error when pressing flower button."""
+        from custom_components.anio.api import AnioApiError
+
+        mock_api_client.send_flower.side_effect = AnioApiError("API Error")
+        with pytest.raises(AnioApiError):
+            await flower_button.async_press()

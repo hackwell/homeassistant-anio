@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -13,8 +13,9 @@ from homeassistant.core import HomeAssistant
 from custom_components.anio.const import DOMAIN
 from custom_components.anio.sensor import (
     AnioBatterySensor,
+    AnioLastMessageSensor,
     AnioLastSeenSensor,
-    AnioStepsSensor,
+    AnioSignalStrengthSensor,
     async_setup_entry,
 )
 
@@ -128,62 +129,6 @@ class TestAnioLastSeenSensor:
         assert sensor.native_value is None
 
 
-class TestAnioStepsSensor:
-    """Tests for AnioStepsSensor."""
-
-    @pytest.fixture
-    def steps_sensor(
-        self,
-        hass: HomeAssistant,
-        mock_coordinator_data: dict,
-    ) -> AnioStepsSensor:
-        """Create a steps sensor for testing."""
-        coordinator = MagicMock()
-        coordinator.data = mock_coordinator_data
-        return AnioStepsSensor(
-            coordinator=coordinator,
-            device_id=TEST_DEVICE_ID,
-        )
-
-    def test_unique_id(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test unique ID format."""
-        assert steps_sensor.unique_id == f"{TEST_DEVICE_ID}_steps"
-
-    def test_name(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test sensor name."""
-        assert steps_sensor.name == f"{TEST_DEVICE_NAME} Steps"
-
-    def test_state_class(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test state class for daily reset."""
-        assert steps_sensor.state_class == SensorStateClass.TOTAL_INCREASING
-
-    def test_icon(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test sensor icon."""
-        assert steps_sensor.icon == "mdi:walk"
-
-    def test_native_value(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test steps value from coordinator data."""
-        # Mock data has stepCount = 5432 from conftest
-        assert steps_sensor.native_value == 5432
-
-    def test_native_value_no_data(self, hass: HomeAssistant) -> None:
-        """Test steps value when no data available."""
-        coordinator = MagicMock()
-        coordinator.data = {}
-        sensor = AnioStepsSensor(
-            coordinator=coordinator,
-            device_id=TEST_DEVICE_ID,
-        )
-        assert sensor.native_value is None
-
-    def test_extra_state_attributes(self, steps_sensor: AnioStepsSensor) -> None:
-        """Test extra state attributes."""
-        attrs = steps_sensor.extra_state_attributes
-        assert attrs is not None
-        assert "step_target" in attrs
-        assert attrs["step_target"] == 10000
-
-
 class TestSensorSetup:
     """Tests for sensor platform setup."""
 
@@ -206,16 +151,17 @@ class TestSensorSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
-        await async_setup_entry(hass, mock_config_entry, async_add_entities)
+        await async_setup_entry(hass, mock_config_entry, add_entities)
 
-        # Should create battery, last_seen, and steps sensors for each device
-        assert len(entities) == 3
+        # Should create battery, last_seen, signal_strength, last_message sensors per device
+        assert len(entities) == 4
         assert any(isinstance(e, AnioBatterySensor) for e in entities)
         assert any(isinstance(e, AnioLastSeenSensor) for e in entities)
-        assert any(isinstance(e, AnioStepsSensor) for e in entities)
+        assert any(isinstance(e, AnioSignalStrengthSensor) for e in entities)
+        assert any(isinstance(e, AnioLastMessageSensor) for e in entities)
 
     @pytest.mark.asyncio
     async def test_async_setup_entry_no_devices(
@@ -235,9 +181,119 @@ class TestSensorSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
-        await async_setup_entry(hass, mock_config_entry, async_add_entities)
+        await async_setup_entry(hass, mock_config_entry, add_entities)
 
         assert len(entities) == 0
+
+
+class TestAnioSignalStrengthSensor:
+    """Tests for AnioSignalStrengthSensor."""
+
+    @pytest.fixture
+    def signal_sensor(
+        self,
+        hass: HomeAssistant,
+        mock_coordinator_data: dict,
+    ) -> AnioSignalStrengthSensor:
+        """Create a signal strength sensor for testing."""
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        return AnioSignalStrengthSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+
+    def test_unique_id(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test unique ID format."""
+        assert signal_sensor.unique_id == f"{TEST_DEVICE_ID}_signal_strength"
+
+    def test_name(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test sensor name."""
+        assert signal_sensor.name == f"{TEST_DEVICE_NAME} Signal Strength"
+
+    def test_icon(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test sensor icon."""
+        assert signal_sensor.icon == "mdi:signal"
+
+    def test_native_unit(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test native unit of measurement."""
+        assert signal_sensor.native_unit_of_measurement == PERCENTAGE
+
+    def test_state_class(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test state class."""
+        assert signal_sensor.state_class == SensorStateClass.MEASUREMENT
+
+    def test_entity_category(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test entity category."""
+        assert signal_sensor.entity_category == EntityCategory.DIAGNOSTIC
+
+    def test_native_value(self, signal_sensor: AnioSignalStrengthSensor) -> None:
+        """Test signal strength value from coordinator data."""
+        assert signal_sensor.native_value == 60
+
+    def test_native_value_no_data(self, hass: HomeAssistant) -> None:
+        """Test signal strength value when no data available."""
+        coordinator = MagicMock()
+        coordinator.data = {}
+        sensor = AnioSignalStrengthSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+        assert sensor.native_value is None
+
+
+class TestAnioLastMessageSensor:
+    """Tests for AnioLastMessageSensor."""
+
+    @pytest.fixture
+    def message_sensor(
+        self,
+        hass: HomeAssistant,
+        mock_coordinator_data: dict,
+    ) -> AnioLastMessageSensor:
+        """Create a last message sensor for testing."""
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        return AnioLastMessageSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+
+    def test_unique_id(self, message_sensor: AnioLastMessageSensor) -> None:
+        """Test unique ID format."""
+        assert message_sensor.unique_id == f"{TEST_DEVICE_ID}_last_message"
+
+    def test_name(self, message_sensor: AnioLastMessageSensor) -> None:
+        """Test sensor name."""
+        assert message_sensor.name == f"{TEST_DEVICE_NAME} Last Message"
+
+    def test_icon(self, message_sensor: AnioLastMessageSensor) -> None:
+        """Test sensor icon."""
+        assert message_sensor.icon == "mdi:message-text"
+
+    def test_native_value(self, message_sensor: AnioLastMessageSensor) -> None:
+        """Test last message value from coordinator data."""
+        assert message_sensor.native_value == "Hi Mom!"
+
+    def test_extra_state_attributes(self, message_sensor: AnioLastMessageSensor) -> None:
+        """Test extra state attributes contain message metadata."""
+        attrs = message_sensor.extra_state_attributes
+        assert attrs is not None
+        assert attrs["sender"] == "WATCH"
+        assert attrs["type"] == "TEXT"
+        assert attrs["is_read"] is False
+        assert "created_at" in attrs
+
+    def test_native_value_no_data(self, hass: HomeAssistant) -> None:
+        """Test last message value when no data available."""
+        coordinator = MagicMock()
+        coordinator.data = {}
+        sensor = AnioLastMessageSensor(
+            coordinator=coordinator,
+            device_id=TEST_DEVICE_ID,
+        )
+        assert sensor.native_value is None
+        assert sensor.extra_state_attributes is None

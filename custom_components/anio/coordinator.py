@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -19,6 +19,7 @@ from .api import (
     AnioDeviceState,
     AnioRateLimitError,
     Geofence,
+    LocationInfo,
 )
 from .const import (
     DEFAULT_SCAN_INTERVAL,
@@ -26,9 +27,6 @@ from .const import (
     EVENT_MESSAGE_RECEIVED,
     SENDER_WATCH,
 )
-
-if TYPE_CHECKING:
-    from .api import Device, LocationInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +85,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             # Fetch geofences (cached, refreshed each poll)
             self._geofences = await self.client.get_geofences()
 
-            # Fetch activity for messages and location updates
+            # Fetch activity for messages
             activity = await self.client.get_activity()
             self._last_activity_check = datetime.now(timezone.utc)
 
@@ -98,8 +96,33 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             result: dict[str, AnioDeviceState] = {}
 
             for device in devices:
-                location = await self._get_device_location(device.id, activity)
-                last_seen = self._get_last_seen(device.id, activity)
+                # Fetch last location from /v1/location/{deviceId}/last
+                latest = await self.client.get_last_location(device.id)
+
+                location: LocationInfo | None = None
+                last_seen: datetime | None = None
+                battery_level = 0
+                signal_strength = 0
+
+                if latest:
+                    location = LocationInfo(
+                        lat=latest.latitude,
+                        lng=latest.longitude,
+                        accuracy=0,
+                        timestamp=latest.date,
+                    )
+                    last_seen = latest.last_response
+                    battery_level = latest.battery_level
+                    signal_strength = latest.signal_strength
+
+                # Fetch chat history and find last WATCH message
+                last_message = None
+                chat_messages = await self.client.get_chat_history(device.id)
+                for msg in reversed(chat_messages):
+                    if msg.sender == SENDER_WATCH:
+                        last_message = msg
+                        break
+
                 is_online = self._calculate_online_status(last_seen)
 
                 state = AnioDeviceState(
@@ -108,6 +131,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     geofences=self._get_device_geofences(device.id, location),
                     last_seen=last_seen,
                     is_online=is_online,
+                    battery_level_value=battery_level,
+                    signal_strength=signal_strength,
+                    last_message=last_message,
                 )
                 result[device.id] = state
 
@@ -124,65 +150,6 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             raise UpdateFailed(f"Rate limited: {err}") from err
         except AnioConnectionError as err:
             raise UpdateFailed(f"Connection error: {err}") from err
-
-    async def _get_device_location(
-        self,
-        device_id: str,
-        activity: list[Any],
-    ) -> LocationInfo | None:
-        """Extract location from activity feed.
-
-        Args:
-            device_id: The device ID.
-            activity: Activity items.
-
-        Returns:
-            Location info or None.
-        """
-        from .api import LocationInfo
-
-        for item in activity:
-            if (
-                hasattr(item, "device_id")
-                and item.device_id == device_id
-                and hasattr(item, "type")
-                and item.type == "LOCATION"
-                and hasattr(item, "data")
-                and item.data
-            ):
-                try:
-                    return LocationInfo.model_validate(item.data)
-                except Exception:  # noqa: BLE001
-                    pass
-
-        return None
-
-    def _get_last_seen(
-        self,
-        device_id: str,
-        activity: list[Any],
-    ) -> datetime | None:
-        """Get the last seen timestamp for a device.
-
-        Args:
-            device_id: The device ID.
-            activity: Activity items.
-
-        Returns:
-            Last seen datetime or None.
-        """
-        last_seen: datetime | None = None
-
-        for item in activity:
-            if (
-                hasattr(item, "device_id")
-                and item.device_id == device_id
-                and hasattr(item, "timestamp")
-            ):
-                if last_seen is None or item.timestamp > last_seen:
-                    last_seen = item.timestamp
-
-        return last_seen
 
     def _calculate_online_status(self, last_seen: datetime | None) -> bool:
         """Calculate if a device is online based on last seen time.
