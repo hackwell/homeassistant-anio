@@ -347,7 +347,14 @@ class AnioApiClient:
             data = await self._request("GET", f"/v1/chat/{device_id}")
             if not isinstance(data, list):
                 return []
-            return [ChatMessage.model_validate(msg) for msg in data]
+
+            result = []
+            for msg in data:
+                try:
+                    result.append(ChatMessage.model_validate(msg))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Failed to parse chat message: %s", err)
+            return result
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No chat history for device %s (404)", device_id)
             return []
