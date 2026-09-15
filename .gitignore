@@ -87,3 +87,5 @@ ANIO_API_DOCUMENTATION.md
 # Local testing
 devcontainer/
 .devcontainer/local/
+.serena/
+.claude/settings.local.json
