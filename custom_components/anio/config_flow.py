@@ -268,19 +268,11 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
         Returns:
             Options flow handler.
         """
-        return AnioOptionsFlow(config_entry)
+        return AnioOptionsFlow()
 
 
 class AnioOptionsFlow(OptionsFlow):
     """Handle options flow for ANIO integration."""
-
-    def __init__(self, config_entry: Any) -> None:
-        """Initialize options flow.
-
-        Args:
-            config_entry: The config entry.
-        """
-        self.config_entry = config_entry
 
     async def async_step_init(
         self,
