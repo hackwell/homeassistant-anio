@@ -103,21 +103,35 @@ For each watch, the integration creates the following entities:
 
 ### Send Message
 
-Send a text or emoji message to the watch.
+Send a text message with the standard notify action:
 
 ```yaml
-service: notify.<watch_name>_message
+service: notify.send_message
+target:
+  entity_id: notify.<watch_name>_message
 data:
   message: "Hello from Home Assistant!"
 ```
 
-#### Service Data
+`notify.send_message` only supports plain text. To send an emoji or set the
+sender name, use `anio.send_message`:
+
+```yaml
+service: anio.send_message
+target:
+  entity_id: notify.<watch_name>_message
+data:
+  message: "E01"
+  message_type: emoji
+```
+
+#### `anio.send_message` Service Data
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `message` | Yes | Text message (max 95 chars) or emoji code (E01-E12) |
-| `data.message_type` | No | `text` (default) or `emoji` |
-| `data.username` | No | Custom sender name shown on watch |
+| `message_type` | No | `text` (default) or `emoji` |
+| `username` | No | Custom sender name shown on watch (text messages only) |
 
 #### Emoji Codes
 
@@ -176,11 +190,12 @@ automation:
         entity_id: person.parent
         from: "home"
     action:
-      - service: notify.kids_watch_message
+      - service: anio.send_message
+        target:
+          entity_id: notify.kids_watch_message
         data:
           message: "Bye! Have a great day!"
-          data:
-            username: "Mom"
+          username: "Mom"
 ```
 
 ### Notify When Watch Goes Offline

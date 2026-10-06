@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
+import voluptuous as vol
 from homeassistant.components.notify import NotifyEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import AnioApiClient
@@ -16,6 +18,12 @@ from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+# notify.send_message only accepts message and title, so the ANIO specific
+# options (emoji, sender name) are offered through anio.send_message.
+SERVICE_SEND_MESSAGE = "send_message"
+ATTR_MESSAGE_TYPE = "message_type"
+ATTR_USERNAME = "username"
 
 
 async def async_setup_entry(
@@ -37,6 +45,19 @@ async def async_setup_entry(
         )
 
     async_add_entities(entities)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_SEND_MESSAGE,
+        {
+            vol.Required("message"): cv.string,
+            vol.Optional(ATTR_MESSAGE_TYPE, default="text"): vol.In(
+                ["text", "emoji"]
+            ),
+            vol.Optional(ATTR_USERNAME): cv.string,
+        },
+        "async_send_anio_message",
+    )
 
 
 class AnioNotifyEntity(AnioEntity, NotifyEntity):
@@ -68,24 +89,33 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         self,
         message: str,
         title: str | None = None,
-        data: dict[str, Any] | None = None,
     ) -> None:
-        """Send a message to the ANIO watch.
+        """Send a text message to the ANIO watch (notify.send_message).
+
+        Args:
+            message: The message text.
+            title: Not used for ANIO.
+        """
+        await self.async_send_anio_message(message)
+
+    async def async_send_anio_message(
+        self,
+        message: str,
+        message_type: str = "text",
+        username: str | None = None,
+    ) -> None:
+        """Send a text or emoji message to the ANIO watch (anio.send_message).
 
         Args:
             message: The message content (text or emoji code).
-            title: Not used for ANIO.
-            data: Optional data containing:
-                - message_type: "text" (default) or "emoji"
-                - username: Custom sender name for text messages
+            message_type: "text" (default) or "emoji".
+            username: Custom sender name for text messages.
         """
         if not message or not message.strip():
             _LOGGER.debug("Skipping empty message")
             return
 
-        data = data or {}
-        message_type = data.get("message_type", "text").lower()
-        username = data.get("username")
+        message_type = message_type.lower()
 
         _LOGGER.debug(
             "Sending %s message to device %s: %s",
