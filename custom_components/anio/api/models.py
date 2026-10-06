@@ -212,15 +212,16 @@ class AnioDeviceState(BaseModel):
     geofences: list[Geofence] = Field(default_factory=list)
     last_seen: datetime | None = None
     is_online: bool = False
-    battery_level_value: int = 0
-    signal_strength: int = 0
+    # None (unknown) when the API has no last location for the device
+    battery_level_value: int | None = None
+    signal_strength: int | None = None
     last_message: ChatMessage | None = None
     alarms: list[AlarmClock] = Field(default_factory=list)
     silence_times: list[SilenceTime] = Field(default_factory=list)
     tracking_mode: str | None = None
 
     @property
-    def battery_level(self) -> int:
+    def battery_level(self) -> int | None:
         """Get battery level from location data."""
         return self.battery_level_value
 

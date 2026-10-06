@@ -102,8 +102,8 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
 
                 location: LocationInfo | None = None
                 last_seen: datetime | None = None
-                battery_level = 0
-                signal_strength = 0
+                battery_level: int | None = None
+                signal_strength: int | None = None
 
                 if latest:
                     location = LocationInfo(
