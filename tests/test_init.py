@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.anio import (
     async_setup_entry,
     async_unload_entry,
+    async_update_options,
 )
 from custom_components.anio.const import (
     CONF_ACCESS_TOKEN,
@@ -216,6 +217,82 @@ class TestIntegrationUnload:
             assert mock_config_entry_with_data.entry_id in hass.data[DOMAIN]
 
 
+class TestUpdateListener:
+    """Tests for the config entry update listener."""
+
+    @pytest.fixture
+    def mock_entry(self, hass: HomeAssistant) -> MagicMock:
+        """Create a mock config entry that has been set up."""
+        entry = MagicMock()
+        entry.entry_id = "test_entry_id"
+        entry.domain = DOMAIN
+        entry.data = {
+            CONF_EMAIL: TEST_EMAIL,
+            CONF_ACCESS_TOKEN: TEST_ACCESS_TOKEN,
+            CONF_REFRESH_TOKEN: TEST_REFRESH_TOKEN,
+            CONF_APP_UUID: TEST_APP_UUID,
+        }
+        entry.options = {"scan_interval": 300}
+        hass.data[DOMAIN] = {
+            entry.entry_id: {
+                "coordinator": MagicMock(),
+                "auth": MagicMock(),
+                "client": MagicMock(),
+                "options": {"scan_interval": 300},
+            }
+        }
+        return entry
+
+    @pytest.mark.asyncio
+    async def test_token_refresh_does_not_reload(
+        self,
+        hass: HomeAssistant,
+        mock_entry: MagicMock,
+    ) -> None:
+        """Persisting refreshed tokens (data-only update) must not reload."""
+        mock_entry.data = {
+            **mock_entry.data,
+            CONF_ACCESS_TOKEN: "new_access",
+            CONF_REFRESH_TOKEN: "new_refresh",
+        }
+        with patch.object(
+            hass.config_entries, "async_reload", new_callable=AsyncMock
+        ) as mock_reload:
+            await async_update_options(hass, mock_entry)
+
+            mock_reload.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_options_change_reloads(
+        self,
+        hass: HomeAssistant,
+        mock_entry: MagicMock,
+    ) -> None:
+        """Changing the options reloads the entry."""
+        mock_entry.options = {"scan_interval": 60}
+        with patch.object(
+            hass.config_entries, "async_reload", new_callable=AsyncMock
+        ) as mock_reload:
+            await async_update_options(hass, mock_entry)
+
+            mock_reload.assert_called_once_with(mock_entry.entry_id)
+
+    @pytest.mark.asyncio
+    async def test_reloads_when_entry_not_loaded(
+        self,
+        hass: HomeAssistant,
+        mock_entry: MagicMock,
+    ) -> None:
+        """Without stored runtime data the listener falls back to reloading."""
+        hass.data[DOMAIN].pop(mock_entry.entry_id)
+        with patch.object(
+            hass.config_entries, "async_reload", new_callable=AsyncMock
+        ) as mock_reload:
+            await async_update_options(hass, mock_entry)
+
+            mock_reload.assert_called_once_with(mock_entry.entry_id)
+
+
 class TestDomainData:
     """Tests for domain data structure."""
 
@@ -270,3 +347,4 @@ class TestDomainData:
             assert "coordinator" in entry_data
             assert "auth" in entry_data
             assert "client" in entry_data
+            assert entry_data["options"] == dict(mock_config_entry.options)
