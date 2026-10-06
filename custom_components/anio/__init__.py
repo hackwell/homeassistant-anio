@@ -94,6 +94,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "auth": auth,
         "client": client,
+        # Snapshot of the options this setup was built with, so the update
+        # listener can tell an options change apart from a token refresh.
+        "options": dict(entry.options),
     }
 
     # Set up platforms
@@ -132,10 +135,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle options update.
+    """Reload the config entry when its options have changed.
+
+    Home Assistant calls update listeners for every config entry update,
+    including the ones made by ``_on_token_refresh`` when refreshed tokens are
+    persisted to ``entry.data``. Reloading in that case would briefly make all
+    entities unavailable on every token refresh, so only reload when the
+    options actually differ from the ones the entry was set up with.
 
     Args:
         hass: Home Assistant instance.
         entry: Config entry.
     """
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if entry_data is not None and entry_data.get("options") == dict(entry.options):
+        _LOGGER.debug("Config entry data updated without option changes, no reload")
+        return
+
     await hass.config_entries.async_reload(entry.entry_id)
