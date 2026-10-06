@@ -87,7 +87,9 @@ automation:
         entity_id: person.parent
         from: "home"
     action:
-      - service: notify.kids_watch_message
+      - service: notify.send_message
+        target:
+          entity_id: notify.kids_watch_message
         data:
           message: "Bye! Be good!"
 ```
