@@ -57,7 +57,7 @@ data:
   device_name: "Kids Watch"
   message_id: "msg456"
   content: "Hello!"
-  sender: "WATCH"
+  sender: "DEVICE"  # WATCH or DEVICE, as reported by the ANIO API
   message_type: "TEXT"
   timestamp: "2024-01-15T10:30:00Z"
 ```

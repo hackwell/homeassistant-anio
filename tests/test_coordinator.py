@@ -183,8 +183,7 @@ class TestAnioDataUpdateCoordinator:
     ) -> None:
         """Test that message events are fired for incoming messages."""
         # Set up activity with a message from the watch
-        from custom_components.anio.api.models import ActivityItem
-
+        
         message_activity = ActivityItem(
             id="activity123",
             deviceId=TEST_DEVICE_ID,
@@ -200,8 +199,6 @@ class TestAnioDataUpdateCoordinator:
             },
         )
 
-        mock_api_client.get_activity.return_value = [message_activity]
-
         events = []
 
         def event_listener(event):
@@ -209,10 +206,10 @@ class TestAnioDataUpdateCoordinator:
 
         hass.bus.async_listen("anio_message_received", event_listener)
 
-        # First update to populate data
+        # First update to populate data (no messages yet)
         await coordinator._async_update_data()
 
-        # Process messages
+        # A new message arrives with the next poll
         await coordinator._process_messages([message_activity])
 
         # Event should be fired
@@ -228,8 +225,7 @@ class TestAnioDataUpdateCoordinator:
         coordinator: AnioDataUpdateCoordinator,
     ) -> None:
         """Test that duplicate messages are not fired twice."""
-        from custom_components.anio.api.models import ActivityItem
-
+        
         message_activity = ActivityItem(
             id="activity123",
             deviceId=TEST_DEVICE_ID,
@@ -251,6 +247,9 @@ class TestAnioDataUpdateCoordinator:
             events.append(event)
 
         hass.bus.async_listen("anio_message_received", event_listener)
+
+        # First poll after startup only records existing messages
+        await coordinator._process_messages([])
 
         # Process same message twice
         await coordinator._process_messages([message_activity])

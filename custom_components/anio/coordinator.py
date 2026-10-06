@@ -61,7 +61,11 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         )
         self.client = client
         self._last_activity_check: datetime | None = None
-        self._seen_message_ids: set[str] = set()
+        # Insertion-ordered, so trimming drops the oldest IDs
+        self._seen_message_ids: dict[str, None] = {}
+        # The first poll only records the messages that already exist, so
+        # old messages are not reported again after every restart.
+        self._messages_primed = False
         self._geofences: list[Geofence] = []
 
     @property
@@ -290,6 +294,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         Args:
             activity: Activity items from the API.
         """
+        fire_events = self._messages_primed
+        self._messages_primed = True
+
         for item in activity:
             # Check if this is a message from the watch
             if (
@@ -305,8 +312,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                 if message_id and message_id in self._seen_message_ids:
                     continue
 
-                # Check if it's from the watch
-                if message_data.get("sender") == SENDER_WATCH:
+                # Check if it's from the watch (the API reports WATCH or DEVICE)
+                sender = message_data.get("sender")
+                if fire_events and sender in (SENDER_WATCH, SENDER_DEVICE):
                     # Get device name
                     device_id = message_data.get("deviceId", "")
                     device_name = "Unknown"
@@ -320,9 +328,10 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                         {
                             "device_id": device_id,
                             "device_name": device_name,
+                            "message_id": message_id,
                             "message_type": message_data.get("type", "TEXT"),
                             "content": message_data.get("text", ""),
-                            "sender": SENDER_WATCH,
+                            "sender": sender,
                             "timestamp": message_data.get("createdAt"),
                         },
                     )
@@ -330,19 +339,17 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     _LOGGER.debug(
                         "Fired message event from device %s: %s",
                         device_name,
-                        message_data.get("text", "")[:20],
+                        (message_data.get("text") or "")[:20],
                     )
 
                 # Mark message as seen
                 if message_id:
-                    self._seen_message_ids.add(message_id)
+                    self._seen_message_ids[message_id] = None
 
-                    # Limit the size of seen messages set
+                    # Limit the size of seen messages, keeping the newest 500
                     if len(self._seen_message_ids) > 1000:
-                        # Remove oldest entries (convert to list, slice, back to set)
-                        self._seen_message_ids = set(
-                            list(self._seen_message_ids)[-500:]
-                        )
+                        for old_id in list(self._seen_message_ids)[:-500]:
+                            del self._seen_message_ids[old_id]
 
     async def async_request_refresh_for_device(self, device_id: str) -> None:
         """Request a data refresh after a device action.
