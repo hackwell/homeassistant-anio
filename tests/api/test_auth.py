@@ -7,7 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.anio.api import AnioAuth, AnioAuthError, AnioOtpRequiredError
+from custom_components.anio.api import (
+    AnioApiError,
+    AnioAuth,
+    AnioAuthError,
+    AnioOtpRequiredError,
+)
 from custom_components.anio.api.models import AuthTokens
 
 
@@ -230,6 +235,83 @@ class TestAnioAuth:
 
         with pytest.raises(AnioAuthError, match="Refresh token expired"):
             await auth.refresh()
+
+    @pytest.mark.asyncio
+    async def test_refresh_forbidden(self, mock_session: MagicMock) -> None:
+        """Test a rejected (403) refresh token requires re-authentication."""
+        auth = AnioAuth(session=mock_session, refresh_token="revoked_token")
+
+        mock_response = MagicMock()
+        mock_response.status = 403
+        mock_response.text = AsyncMock(return_value="Forbidden")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post.return_value = mock_response
+
+        with pytest.raises(AnioAuthError):
+            await auth.refresh()
+
+    @pytest.mark.asyncio
+    async def test_refresh_server_error_is_temporary(
+        self, mock_session: MagicMock
+    ) -> None:
+        """Test a server error during refresh does not look like an auth failure."""
+        auth = AnioAuth(session=mock_session, refresh_token="refresh_token")
+
+        mock_response = MagicMock()
+        mock_response.status = 503
+        mock_response.text = AsyncMock(return_value="Service Unavailable")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post.return_value = mock_response
+
+        with pytest.raises(AnioApiError) as exc_info:
+            await auth.refresh()
+
+        assert not isinstance(exc_info.value, AnioAuthError)
+        assert exc_info.value.status_code == 503
+        # The refresh token must be kept for the next attempt
+        assert auth.refresh_token == "refresh_token"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_ensure_valid_token_refreshes_once(
+        self, mock_session: MagicMock
+    ) -> None:
+        """Test concurrent callers share one refresh instead of reusing the token."""
+        import asyncio
+        import base64
+        import json
+
+        future_exp = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        payload = base64.urlsafe_b64encode(
+            json.dumps({"exp": future_exp}).encode()
+        ).decode().rstrip("=")
+        new_token = f"header.{payload}.signature"
+
+        auth = AnioAuth(session=mock_session, refresh_token="refresh_token")
+
+        async def slow_enter() -> MagicMock:
+            await asyncio.sleep(0.01)
+            return mock_response
+
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(
+            return_value={"accessToken": new_token, "refreshToken": "rotated"}
+        )
+        mock_response.__aenter__ = AsyncMock(side_effect=slow_enter)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post.return_value = mock_response
+
+        results = await asyncio.gather(
+            auth.ensure_valid_token(), auth.ensure_valid_token()
+        )
+
+        assert results == [new_token, new_token]
+        assert mock_session.post.call_count == 1
 
     @pytest.mark.asyncio
     async def test_ensure_valid_token_already_valid(

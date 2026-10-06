@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import (
     AnioApiClient,
+    AnioApiError,
     AnioAuthError,
     AnioConnectionError,
     AnioDeviceState,
@@ -159,6 +160,8 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             raise UpdateFailed(f"Rate limited: {err}") from err
         except AnioConnectionError as err:
             raise UpdateFailed(f"Connection error: {err}") from err
+        except AnioApiError as err:
+            raise UpdateFailed(f"API error: {err}") from err
 
     def _calculate_online_status(self, last_seen: datetime | None) -> bool:
         """Calculate if a device is online based on last seen time.
