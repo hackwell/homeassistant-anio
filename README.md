@@ -134,7 +134,8 @@ data:
 
 ### Message Received
 
-When a message arrives from the watch, the integration fires an `anio_message_received` event:
+When a message arrives from the watch, the integration fires an `anio_message_received` event.
+Messages that already existed when Home Assistant started are not reported again:
 
 ```yaml
 event_type: anio_message_received
@@ -143,7 +144,7 @@ data:
   device_name: "Kids Watch"
   message_id: "msg789"
   content: "Hello!"
-  sender: "WATCH"
+  sender: "DEVICE"  # WATCH or DEVICE, as reported by the ANIO API
   message_type: "TEXT"
   timestamp: "2024-01-15T10:30:00+00:00"
 ```
