@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -12,7 +13,12 @@ from typing import TYPE_CHECKING
 import aiohttp
 
 from ..const import API_URL, CLIENT_ID, TOKEN_REFRESH_BUFFER
-from .exceptions import AnioAuthError, AnioConnectionError, AnioOtpRequiredError
+from .exceptions import (
+    AnioApiError,
+    AnioAuthError,
+    AnioConnectionError,
+    AnioOtpRequiredError,
+)
 from .models import AuthTokens
 
 if TYPE_CHECKING:
@@ -57,6 +63,9 @@ class AnioAuth:
         self._app_uuid = app_uuid or str(uuid.uuid4())
         self._token_expiry: datetime | None = None
         self._on_token_refresh = on_token_refresh
+        # Serializes refreshes so concurrent requests don't spend the same
+        # (rotating) refresh token twice.
+        self._refresh_lock = asyncio.Lock()
 
         if access_token:
             self._token_expiry = self._parse_jwt_expiry(access_token)
@@ -184,7 +193,8 @@ class AnioAuth:
             The new access token.
 
         Raises:
-            AnioAuthError: If refresh fails.
+            AnioAuthError: If the refresh token is rejected.
+            AnioApiError: If the server fails for another reason (temporary).
             AnioConnectionError: If connection fails.
         """
         if not self._refresh_token:
@@ -201,12 +211,16 @@ class AnioAuth:
                 f"{API_URL}/v1/auth/refresh-access-token",
                 headers=headers,
             ) as response:
-                if response.status == 401:
+                if response.status in (401, 403):
                     raise AnioAuthError("Refresh token expired")
 
+                # Anything else (e.g. 5xx during maintenance) is temporary and
+                # must not force the user to re-authenticate.
                 if response.status != 200:
                     text = await response.text()
-                    raise AnioAuthError(f"Token refresh failed: {text}")
+                    raise AnioApiError(
+                        f"Token refresh failed: {text}", response.status
+                    )
 
                 data = await response.json()
                 self._access_token = data.get("accessToken")
@@ -245,8 +259,13 @@ class AnioAuth:
         if self.is_token_valid and self._access_token:
             return self._access_token
 
-        _LOGGER.debug("Token expired or expiring soon, refreshing...")
-        return await self.refresh()
+        async with self._refresh_lock:
+            # Another request may have refreshed the token while we waited.
+            if self.is_token_valid and self._access_token:
+                return self._access_token
+
+            _LOGGER.debug("Token expired or expiring soon, refreshing...")
+            return await self.refresh()
 
     async def logout(self) -> None:
         """Logout and invalidate the session.
