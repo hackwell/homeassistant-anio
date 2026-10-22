@@ -97,7 +97,7 @@ class TestAnioNotifyEntity:
         )
         mock_api_client.send_text_message.return_value = mock_message
 
-        await notify_entity.async_send_message("Hello!", data={"username": "Mom"})
+        await notify_entity.async_send_anio_message("Hello!", username="Mom")
 
         mock_api_client.send_text_message.assert_called_once_with(
             TEST_DEVICE_ID,
@@ -124,10 +124,7 @@ class TestAnioNotifyEntity:
         )
         mock_api_client.send_emoji_message.return_value = mock_message
 
-        await notify_entity.async_send_message(
-            "E01",
-            data={"message_type": "emoji"},
-        )
+        await notify_entity.async_send_anio_message("E01", message_type="emoji")
 
         mock_api_client.send_emoji_message.assert_called_once_with(
             TEST_DEVICE_ID,
@@ -161,6 +158,22 @@ class TestAnioNotifyEntity:
         with pytest.raises(AnioApiError):
             await notify_entity.async_send_message("Hello!")
 
+    @pytest.mark.asyncio
+    async def test_notify_send_message_sends_text(
+        self,
+        notify_entity: AnioNotifyEntity,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test notify.send_message (message + title only) sends plain text."""
+        await notify_entity.async_send_message("Hello!", title="ignored")
+
+        mock_api_client.send_text_message.assert_called_once_with(
+            TEST_DEVICE_ID,
+            "Hello!",
+            username=None,
+        )
+        mock_api_client.send_emoji_message.assert_not_called()
+
 
 class TestNotifySetup:
     """Tests for notify platform setup."""
@@ -186,14 +199,57 @@ class TestNotifySetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
-        await async_setup_entry(hass, mock_config_entry, async_add_entities)
+        with patch(
+            "custom_components.anio.notify.entity_platform.async_get_current_platform"
+        ):
+            await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
         # Should create one notify entity per device
         assert len(entities) == 1
         assert isinstance(entities[0], AnioNotifyEntity)
+
+    @pytest.mark.asyncio
+    async def test_send_message_service_registered(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MagicMock,
+        mock_coordinator_data: dict,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test anio.send_message is registered with emoji and username options."""
+        import voluptuous as vol
+
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+        hass.data[DOMAIN] = {
+            mock_config_entry.entry_id: {
+                "coordinator": coordinator,
+                "client": mock_api_client,
+            }
+        }
+
+        with patch(
+            "custom_components.anio.notify.entity_platform.async_get_current_platform"
+        ) as get_platform:
+            await async_setup_entry(hass, mock_config_entry, lambda entities: None)
+
+        register = get_platform.return_value.async_register_entity_service
+        register.assert_called_once()
+        name, schema, method = register.call_args.args
+        assert name == "send_message"
+        assert method == "async_send_anio_message"
+
+        validate = vol.Schema(schema)
+        assert validate({"message": "E01", "message_type": "emoji"}) == {
+            "message": "E01",
+            "message_type": "emoji",
+        }
+        assert validate({"message": "Hi", "username": "Mom"})["message_type"] == "text"
+        with pytest.raises(vol.Invalid):
+            validate({"message": "Hi", "message_type": "video"})
 
     @pytest.mark.asyncio
     async def test_async_setup_entry_no_devices(
@@ -215,10 +271,13 @@ class TestNotifySetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
-        await async_setup_entry(hass, mock_config_entry, async_add_entities)
+        with patch(
+            "custom_components.anio.notify.entity_platform.async_get_current_platform"
+        ):
+            await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
         assert len(entities) == 0
 
@@ -278,10 +337,7 @@ class TestNotifyServiceValidation:
         )
 
         with pytest.raises(AnioApiError, match="Invalid emoji code"):
-            await notify_entity.async_send_message(
-                "E99",
-                data={"message_type": "emoji"},
-            )
+            await notify_entity.async_send_anio_message("E99", message_type="emoji")
 
     @pytest.mark.asyncio
     async def test_valid_emoji_codes(
@@ -304,9 +360,8 @@ class TestNotifyServiceValidation:
 
         for i in range(1, 13):
             emoji_code = f"E{i:02d}"
-            await notify_entity.async_send_message(
-                emoji_code,
-                data={"message_type": "emoji"},
+            await notify_entity.async_send_anio_message(
+                emoji_code, message_type="emoji"
             )
 
         assert mock_api_client.send_emoji_message.call_count == 12
