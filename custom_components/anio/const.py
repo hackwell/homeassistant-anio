@@ -55,6 +55,8 @@ DEFAULT_SENDER_NAME: Final = "Home Assistant"
 
 # Event types
 EVENT_MESSAGE_RECEIVED: Final = f"{DOMAIN}_message_received"
+# ANIO's own alerts: GEOFENCE_ENTERED, GEOFENCE_LEFT, LOW_BATTERY, ...
+EVENT_ACTIVITY: Final = f"{DOMAIN}_activity"
 
 # Ring profiles
 RING_PROFILES: Final = ["RING_AND_VIBRATE", "VIBRATE_ONLY", "SILENT"]

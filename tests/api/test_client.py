@@ -393,24 +393,38 @@ class TestAnioApiClient:
     async def test_get_activity(
         self, client: AnioApiClient, mock_session: MagicMock
     ) -> None:
-        """Test getting activity feed."""
+        """Test getting the alerts of a device (API format)."""
         activity_data = [
             {
                 "id": "act123",
+                "text": "Kids Watch has left Home",
+                "type": "GEOFENCE_LEFT",
                 "deviceId": "device123",
-                "type": "MESSAGE",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
+                "geofence": {"id": "geo1", "name": "Home", "radiusInKm": 0.3},
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "id": "act124",
+                "text": "Battery low",
+                "type": "LOW_BATTERY",
+                "deviceId": "device123",
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+            },
         ]
 
         mock_session.request.return_value = self._create_mock_response(
             json_data=activity_data
         )
 
-        activity = await client.get_activity()
+        activity = await client.get_activity("device123")
 
-        assert len(activity) == 1
-        assert activity[0].type == "MESSAGE"
+        assert mock_session.request.call_args.kwargs["params"] == {
+            "deviceId": "device123"
+        }
+        assert [a.type for a in activity] == ["GEOFENCE_LEFT", "LOW_BATTERY"]
+        assert activity[0].geofence_name == "Home"
+        assert activity[0].geofence_id == "geo1"
+        assert activity[1].geofence_name is None
 
 
     @staticmethod

@@ -188,15 +188,29 @@ class LocationInfo(BaseModel):
 
 
 class ActivityItem(BaseModel):
-    """Activity item from the ANIO API feed."""
+    """Alert from GET /v1/activity, e.g. GEOFENCE_ENTERED or LOW_BATTERY."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     id: str
     device_id: str = Field(alias="deviceId")
     type: str
-    timestamp: datetime
-    data: dict | None = None
+    # Human-readable text from ANIO (as shown in the app)
+    text: str | None = None
+    created_at: datetime = Field(alias="createdAt")
+    # Set for geofence alerts; kept as dict so a format change doesn't drop
+    # the whole alert
+    geofence: dict | None = None
+
+    @property
+    def geofence_id(self) -> str | None:
+        """Get the ID of the geofence of a geofence alert."""
+        return self.geofence.get("id") if self.geofence else None
+
+    @property
+    def geofence_name(self) -> str | None:
+        """Get the name of the geofence of a geofence alert."""
+        return self.geofence.get("name") if self.geofence else None
 
 
 # The API sends weekdays as a 7-character bitstring starting with Sunday,
