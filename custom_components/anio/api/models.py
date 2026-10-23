@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -259,8 +259,8 @@ class AlarmClock(BaseModel):
         return parse_weekdays(v)
 
 
-class SilenceTime(BaseModel):
-    """Silence time entry from the ANIO API."""
+class TimeWindow(BaseModel):
+    """Weekly time window from the ANIO API (silence or school way time)."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -276,6 +276,42 @@ class SilenceTime(BaseModel):
     def validate_days(cls, v: object) -> list[str]:
         """Accept the API's weekday bitstring."""
         return parse_weekdays(v)
+
+    def is_active(self, now: datetime) -> bool:
+        """Return True if the window is running at the given local time.
+
+        Args:
+            now: The current local time.
+
+        Returns:
+            True while an enabled window covers the current time.
+        """
+        if not self.enabled:
+            return False
+        try:
+            start = time.fromisoformat(self.start_time)
+            end = time.fromisoformat(self.end_time)
+        except ValueError:
+            return False
+
+        def runs_on(day: datetime) -> bool:
+            return WEEKDAYS[(day.weekday() + 1) % 7] in self.days
+
+        current = now.time()
+        if start <= end:
+            return start <= current < end and runs_on(now)
+        # Past midnight, the window started on the previous day
+        if current >= start:
+            return runs_on(now)
+        return current < end and runs_on(now - timedelta(days=1))
+
+
+class SilenceTime(TimeWindow):
+    """Silence time entry from the ANIO API."""
+
+
+class SchoolWayTime(TimeWindow):
+    """School way time entry; the watch locates every minute meanwhile."""
 
 
 class AnioDeviceState(BaseModel):
@@ -294,6 +330,7 @@ class AnioDeviceState(BaseModel):
     last_message: ChatMessage | None = None
     alarms: list[AlarmClock] = Field(default_factory=list)
     silence_times: list[SilenceTime] = Field(default_factory=list)
+    school_way_times: list[SchoolWayTime] = Field(default_factory=list)
     tracking_mode: str | None = None
 
     @property

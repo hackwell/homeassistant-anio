@@ -43,6 +43,7 @@ For each watch, the integration creates:
 | Next Alarm | Sensor | Earliest enabled alarm time |
 | Tracking Mode | Sensor | Current tracking mode |
 | Online | Binary Sensor | Whether watch is currently online |
+| School Way | Binary Sensor | On while a school way time is running |
 | At [Geofence] | Binary Sensor | One per geofence, shows presence |
 | Location | Device Tracker | Watch location for map display |
 | Ring | Button | Make the watch ring and vibrate (does not locate it) |

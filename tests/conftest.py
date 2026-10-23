@@ -248,6 +248,7 @@ def mock_api_client(
     client.create_alarm = AsyncMock(return_value=None)
     client.delete_alarm = AsyncMock()
     client.get_silence_times = AsyncMock(return_value=[])
+    client.get_school_way_times = AsyncMock(return_value=[])
     client.enable_silence_times = AsyncMock()
     client.disable_silence_times = AsyncMock()
     client.get_tracking_mode = AsyncMock(return_value=None)

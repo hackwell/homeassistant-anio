@@ -24,6 +24,7 @@ from .models import (
     DeviceSettings,
     Geofence,
     LocationInfo,
+    SchoolWayTime,
     SilenceTime,
     UserInfo,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "DeviceSettings",
     "Geofence",
     "LocationInfo",
+    "SchoolWayTime",
     "SilenceTime",
     "UserInfo",
 ]

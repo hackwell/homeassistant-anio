@@ -72,6 +72,9 @@
       "online": {
         "name": "Online"
       },
+      "school_way": {
+        "name": "Schulweg"
+      },
       "geofence": {
         "name": "Im Bereich {geofence_name}"
       }

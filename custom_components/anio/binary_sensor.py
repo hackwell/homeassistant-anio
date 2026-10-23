@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -12,6 +13,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_change
+from homeassistant.util import dt as dt_util
 
 from .api import Geofence
 from .const import DOMAIN
@@ -29,12 +32,15 @@ async def async_setup_entry(
         "coordinator"
     ]
 
-    # Online status sensor for each watch
+    # Online status and school way sensor for each watch
     async_setup_device_entities(
         entry,
         coordinator,
         async_add_entities,
-        lambda device_id: [AnioOnlineSensor(coordinator, device_id)],
+        lambda device_id: [
+            AnioOnlineSensor(coordinator, device_id),
+            AnioSchoolWaySensor(coordinator, device_id),
+        ],
     )
 
     # A sensor for each geofence, also for geofences added in the app later
@@ -80,6 +86,63 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
         if device_state:
             return device_state.is_online
         return None
+
+
+class AnioSchoolWaySensor(AnioEntity, BinarySensorEntity):
+    """On while one of the watch's school way times is running."""
+
+    _attr_translation_key = "school_way"
+
+    _attr_icon = "mdi:school"
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        device_id: str,
+    ) -> None:
+        """Initialize the school way sensor."""
+        super().__init__(coordinator, device_id)
+        self._attr_unique_id = f"{device_id}_school_way"
+
+    async def async_added_to_hass(self) -> None:
+        """Re-check the time windows every minute, without API requests."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_track_time_change(self.hass, self._handle_minute, second=0)
+        )
+
+    @callback
+    def _handle_minute(self, _now: datetime) -> None:
+        """Update the state when a minute starts."""
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return True while a school way time is running."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if not device_state:
+            return None
+        now = dt_util.now()
+        return any(sw.is_active(now) for sw in device_state.school_way_times)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the school way times."""
+        device_state = self.coordinator.data.get(self._device_id)
+        if not device_state:
+            return None
+
+        return {
+            "periods": [
+                {
+                    "start": sw.start_time,
+                    "end": sw.end_time,
+                    "days": ", ".join(sw.days),
+                    "enabled": sw.enabled,
+                }
+                for sw in device_state.school_way_times
+            ],
+        }
 
 
 class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):

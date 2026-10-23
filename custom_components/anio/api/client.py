@@ -35,6 +35,7 @@ from .models import (
     Device,
     DeviceLocation,
     Geofence,
+    SchoolWayTime,
     SilenceTime,
 )
 
@@ -577,6 +578,34 @@ class AnioApiClient:
             return result
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No silence times for device %s (404)", device_id)
+            return []
+
+    async def get_school_way_times(self, device_id: str) -> list[SchoolWayTime]:
+        """Get the school way times of a device.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            List of school way times, empty on error.
+        """
+        try:
+            data = await self._request("GET", f"/v1/school-way-time/{device_id}")
+            if not isinstance(data, list):
+                return []
+
+            result = []
+            for item in data:
+                try:
+                    result.append(SchoolWayTime.model_validate(item))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "Failed to parse school way time: %s",
+                        _describe_parse_error(err),
+                    )
+            return result
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No school way times for device %s (404)", device_id)
             return []
 
     async def enable_silence_times(self, device_id: str) -> None:
