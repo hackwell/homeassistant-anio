@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
+from pydantic import ValidationError
 
 from ..const import (
     API_URL,
@@ -38,6 +39,20 @@ if TYPE_CHECKING:
     from .auth import AnioAuth
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _describe_parse_error(err: Exception) -> str:
+    """Describe a parse error without the API data it contains.
+
+    Pydantic includes the offending input value in its message, which can be
+    a chat text or location. Only log field names and error types.
+    """
+    if isinstance(err, ValidationError):
+        return "; ".join(
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['type']}"
+            for error in err.errors(include_input=False, include_url=False)
+        )
+    return type(err).__name__
 
 
 class AnioApiClient:
@@ -277,7 +292,9 @@ class AnioApiClient:
             try:
                 result.append(ActivityItem.model_validate(item))
             except Exception as err:  # noqa: BLE001
-                _LOGGER.debug("Failed to parse activity item: %s", err)
+                _LOGGER.debug(
+                    "Failed to parse activity item: %s", _describe_parse_error(err)
+                )
 
         return result
 
@@ -364,7 +381,10 @@ class AnioApiClient:
                 try:
                     result.append(ChatMessage.model_validate(msg))
                 except Exception as err:  # noqa: BLE001
-                    _LOGGER.debug("Failed to parse chat message: %s", err)
+                    _LOGGER.debug(
+                        "Failed to parse chat message: %s",
+                        _describe_parse_error(err),
+                    )
             return result
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No chat history for device %s (404)", device_id)
@@ -389,7 +409,10 @@ class AnioApiClient:
                 try:
                     result.append(AlarmClock.model_validate(item))
                 except Exception as err:  # noqa: BLE001
-                    _LOGGER.debug("Failed to parse alarm clock: %s", err)
+                    _LOGGER.debug(
+                        "Failed to parse alarm clock: %s",
+                        _describe_parse_error(err),
+                    )
             return result
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No alarms for device %s (404)", device_id)
@@ -448,7 +471,10 @@ class AnioApiClient:
                 try:
                     result.append(SilenceTime.model_validate(item))
                 except Exception as err:  # noqa: BLE001
-                    _LOGGER.debug("Failed to parse silence time: %s", err)
+                    _LOGGER.debug(
+                        "Failed to parse silence time: %s",
+                        _describe_parse_error(err),
+                    )
             return result
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No silence times for device %s (404)", device_id)

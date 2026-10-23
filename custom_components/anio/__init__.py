@@ -84,6 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass=hass,
         client=client,
         scan_interval=scan_interval,
+        config_entry=entry,
     )
 
     # Fetch initial data

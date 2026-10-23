@@ -165,6 +165,21 @@ class TestAnioNotifyEntity:
             await notify_entity.async_send_message("Hello!")
 
     @pytest.mark.asyncio
+    async def test_message_text_not_logged(
+        self,
+        notify_entity: AnioNotifyEntity,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test the message content never ends up in the debug log."""
+        import logging
+
+        caplog.set_level(logging.DEBUG, logger="custom_components.anio")
+        await notify_entity.async_send_message("Secret pickup place")
+
+        assert "Sending text message (19 characters)" in caplog.text
+        assert "Secret" not in caplog.text
+
+    @pytest.mark.asyncio
     async def test_notify_send_message_sends_text(
         self,
         notify_entity: AnioNotifyEntity,

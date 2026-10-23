@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
@@ -120,3 +121,21 @@ class TestMessageEvents:
         assert len(coordinator._seen_message_ids) == 500
         assert "m1000" in coordinator._seen_message_ids
         assert "m0" not in coordinator._seen_message_ids
+
+    @pytest.mark.asyncio
+    async def test_message_text_not_logged(
+        self,
+        hass: HomeAssistant,
+        coordinator: AnioDataUpdateCoordinator,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test the message content never ends up in the debug log."""
+        caplog.set_level(logging.DEBUG, logger="custom_components.anio")
+        await coordinator._process_messages([])
+        await coordinator._process_messages(
+            [self._message("new1", "DEVICE", text="Secret pickup place")]
+        )
+
+        hass.bus.async_fire.assert_called_once()
+        assert "Fired TEXT message event" in caplog.text
+        assert "Secret" not in caplog.text

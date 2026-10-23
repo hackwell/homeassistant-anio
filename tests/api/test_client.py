@@ -357,3 +357,38 @@ class TestAnioApiClient:
 
         assert len(activity) == 1
         assert activity[0].type == "MESSAGE"
+
+
+class TestDescribeParseError:
+    """Tests for logging parse errors without API data."""
+
+    def test_validation_error_without_input(self) -> None:
+        """Test only field names and error types are kept."""
+        from pydantic import ValidationError
+
+        from custom_components.anio.api.client import _describe_parse_error
+
+        with pytest.raises(ValidationError) as exc_info:
+            ChatMessage.model_validate(
+                {
+                    "id": "m1",
+                    "deviceId": "d1",
+                    "text": {"secret": "Secret pickup place"},
+                    "type": "STICKER",
+                    "sender": "DEVICE",
+                    "createdAt": "2026-10-23T10:00:00Z",
+                }
+            )
+
+        description = _describe_parse_error(exc_info.value)
+
+        assert "text: string_type" in description
+        assert "type: literal_error" in description
+        assert "Secret" not in description
+        assert "STICKER" not in description
+
+    def test_other_errors_only_type_name(self) -> None:
+        """Test non-validation errors are reduced to their type name."""
+        from custom_components.anio.api.client import _describe_parse_error
+
+        assert _describe_parse_error(KeyError("Secret pickup place")) == "KeyError"

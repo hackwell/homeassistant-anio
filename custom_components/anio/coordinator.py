@@ -46,6 +46,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         hass: HomeAssistant,
         client: AnioApiClient,
         scan_interval: int = DEFAULT_SCAN_INTERVAL,
+        config_entry: ConfigEntry | None = None,
     ) -> None:
         """Initialize the coordinator.
 
@@ -53,10 +54,12 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             hass: Home Assistant instance.
             client: ANIO API client.
             scan_interval: Polling interval in seconds.
+            config_entry: The config entry this coordinator belongs to.
         """
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=scan_interval),
         )
@@ -304,9 +307,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     )
 
                     _LOGGER.debug(
-                        "Fired message event from device %s: %s",
-                        device_name,
-                        (message_data.get("text") or "")[:20],
+                        "Fired %s message event for device %s",
+                        message_data.get("type", "TEXT"),
+                        device_id,
                     )
 
                 # Mark message as seen
