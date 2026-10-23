@@ -303,13 +303,20 @@ class AnioApiClient:
         data = await self._request("POST", "/v1/chat/message/emoji", json=payload)
         return ChatMessage.model_validate(data)
 
-    async def get_activity(self) -> list[ActivityItem]:
-        """Get activity feed including messages.
+    async def get_activity(self, device_id: str) -> list[ActivityItem]:
+        """Get the alerts of a device (geofence entered/left, low battery, ...).
+
+        Chat messages are not part of this feed.
+
+        Args:
+            device_id: The device ID.
 
         Returns:
             List of activity items.
         """
-        data = await self._request("GET", "/v1/activity")
+        data = await self._request(
+            "GET", "/v1/activity", params={"deviceId": device_id}
+        )
         if not isinstance(data, list):
             return []
 

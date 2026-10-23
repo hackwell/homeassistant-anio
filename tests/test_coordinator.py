@@ -51,8 +51,8 @@ class TestAnioDataUpdateCoordinator:
 
         mock_api_client.get_devices.assert_called_once()
         mock_api_client.get_geofences.assert_called_once()
-        # Chat messages come from the chat history, not the activity feed
-        mock_api_client.get_activity.assert_not_called()
+        # ANIO's alerts are fetched per device
+        mock_api_client.get_activity.assert_awaited_once_with(TEST_DEVICE_ID)
 
     @pytest.mark.asyncio
     async def test_update_auth_error(

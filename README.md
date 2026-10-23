@@ -186,7 +186,44 @@ data:
   timestamp: "2024-01-15T10:30:00+00:00"
 ```
 
+### ANIO Alerts
+
+ANIO's own alerts, the ones the ANIO app shows as notifications, are fired as
+`anio_activity` events. Geofence alerts come from ANIO itself, i.e. they follow the
+geofence's monitoring window set in the app. Alerts that already existed when Home
+Assistant started are not reported again.
+
+```yaml
+event_type: anio_activity
+data:
+  device_id: "abc123def456"
+  device_name: "Kids Watch"
+  activity_id: "act123"
+  type: "GEOFENCE_ENTERED"  # also GEOFENCE_LEFT, LOW_BATTERY, ...
+  text: "Kids Watch has arrived at School"  # as shown in the ANIO app
+  geofence_id: "geo456"     # null for alerts without a geofence
+  geofence_name: "School"
+  timestamp: "2024-01-15T07:52:00+00:00"
+```
+
 ## Example Automations
+
+### Arrived at School (ANIO alert)
+
+```yaml
+automation:
+  - alias: "Kids arrived at school"
+    trigger:
+      - platform: event
+        event_type: anio_activity
+        event_data:
+          type: GEOFENCE_ENTERED
+          geofence_name: School
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          message: "{{ trigger.event.data.text }}"
+```
 
 ### Low Battery Notification
 

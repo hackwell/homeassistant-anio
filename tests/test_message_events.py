@@ -184,12 +184,3 @@ class TestUpdateWithChatHistory:
 
         hass.bus.async_fire.assert_called_once()
         assert hass.bus.async_fire.call_args.args[1]["message_id"] == "new"
-
-    @pytest.mark.asyncio
-    async def test_activity_feed_not_requested(
-        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
-    ) -> None:
-        """Test the activity feed (which has no chat messages) isn't polled."""
-        await coordinator._async_update_data()
-
-        mock_api_client.get_activity.assert_not_called()

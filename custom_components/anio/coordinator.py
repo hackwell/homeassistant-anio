@@ -12,6 +12,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
+    ActivityItem,
     AnioApiClient,
     AnioApiError,
     AnioAuthError,
@@ -25,6 +26,7 @@ from .api import (
 from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    EVENT_ACTIVITY,
     EVENT_MESSAGE_RECEIVED,
     SENDER_DEVICE,
     SENDER_WATCH,
@@ -70,6 +72,9 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         # poll of a device fires no events, so old messages are not reported
         # again after every restart.
         self._primed_devices: set[str] = set()
+        # Same for ANIO's alerts (activity feed)
+        self._seen_activity_ids: dict[str, None] = {}
+        self._primed_activity_devices: set[str] = set()
 
     @property
     def geofences(self) -> list[Geofence]:
@@ -130,6 +135,14 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                 last_message = watch_messages[-1] if watch_messages else None
                 self._fire_message_events(
                     device.id, device.settings.name, watch_messages
+                )
+
+                # ANIO's own alerts (geofence entered/left, low battery)
+                activity = await self.client.get_activity(device.id)
+                self._fire_activity_events(
+                    device.id,
+                    device.settings.name,
+                    sorted(activity, key=lambda item: item.created_at),
                 )
 
                 # Fetch alarms, silence times, and tracking mode
@@ -303,6 +316,49 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         if len(self._seen_message_ids) > 1000:
             for old_id in list(self._seen_message_ids)[:-500]:
                 del self._seen_message_ids[old_id]
+
+    def _fire_activity_events(
+        self,
+        device_id: str,
+        device_name: str,
+        items: list[ActivityItem],
+    ) -> None:
+        """Fire anio_activity for new alerts from ANIO.
+
+        Args:
+            device_id: The device ID.
+            device_name: The device name.
+            items: Activity items, oldest first.
+        """
+        first_poll = device_id not in self._primed_activity_devices
+        self._primed_activity_devices.add(device_id)
+
+        for item in items:
+            if item.id in self._seen_activity_ids:
+                continue
+            self._seen_activity_ids[item.id] = None
+
+            if first_poll:
+                continue
+
+            self.hass.bus.async_fire(
+                EVENT_ACTIVITY,
+                {
+                    "device_id": device_id,
+                    "device_name": device_name,
+                    "activity_id": item.id,
+                    "type": item.type,
+                    "text": item.text or "",
+                    "geofence_id": item.geofence_id,
+                    "geofence_name": item.geofence_name,
+                    "timestamp": item.created_at.isoformat(),
+                },
+            )
+            _LOGGER.debug("Fired %s activity event for device %s", item.type, device_id)
+
+        if len(self._seen_activity_ids) > 1000:
+            for old_id in list(self._seen_activity_ids)[:-500]:
+                del self._seen_activity_ids[old_id]
 
     async def async_request_refresh_for_device(self, device_id: str) -> None:
         """Request a data refresh after a device action.
