@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
 
@@ -58,7 +58,7 @@ class AnioApiClient:
         self,
         method: str,
         endpoint: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> dict | list | None:
         """Make an authenticated API request.
 
@@ -114,7 +114,7 @@ class AnioApiClient:
                 if response.status == 204:
                     return None
 
-                return await response.json()
+                return cast(dict | list, await response.json())
 
         except aiohttp.ClientError as err:
             raise AnioConnectionError(f"Connection failed: {err}") from err
