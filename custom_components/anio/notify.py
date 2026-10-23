@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-import voluptuous as vol
 from homeassistant.components.notify import NotifyEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -16,6 +15,11 @@ from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity
+
+try:
+    import probatio as vol
+except ImportError:  # Home Assistant < 2026.9 still uses voluptuous
+    import voluptuous as vol  # type: ignore[no-redef]
 
 _LOGGER = logging.getLogger(__name__)
 

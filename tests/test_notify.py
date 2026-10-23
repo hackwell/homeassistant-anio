@@ -226,7 +226,10 @@ class TestNotifySetup:
         mock_api_client: AsyncMock,
     ) -> None:
         """Test anio.send_message is registered with emoji and username options."""
-        import voluptuous as vol
+        try:
+            import probatio as vol
+        except ImportError:  # Home Assistant < 2026.9
+            import voluptuous as vol  # type: ignore[no-redef]
 
         coordinator = MagicMock()
         coordinator.data = mock_coordinator_data
