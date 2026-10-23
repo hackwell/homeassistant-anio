@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -118,8 +118,12 @@ class TestGeofenceSensor:
         original = Geofence.model_validate(API_GEOFENCE)
         sensor = self._sensor(mock_device, [original], None)
 
+        assert sensor.translation_placeholders == {"geofence_name": "Home"}
+
         renamed = Geofence.model_validate({**API_GEOFENCE, "name": "Zuhause"})
         sensor.coordinator.data[TEST_DEVICE_ID].geofences = [renamed]
+        with patch.object(sensor, "async_write_ha_state"):
+            sensor._handle_coordinator_update()
 
         assert sensor.translation_placeholders == {"geofence_name": "Zuhause"}
         assert sensor.extra_state_attributes["geofence_name"] == "Zuhause"

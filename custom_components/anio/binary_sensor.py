@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import Geofence
@@ -85,6 +85,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         """Initialize the geofence sensor."""
         super().__init__(coordinator, device_id, geofence)
         self._attr_unique_id = f"{device_id}_geofence_{geofence.id}"
+        self._attr_translation_placeholders = {"geofence_name": geofence.name}
 
     @property
     def _current_geofence(self) -> Geofence:
@@ -96,10 +97,13 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
                     return geofence
         return self._geofence
 
-    @property
-    def translation_placeholders(self) -> dict[str, str]:
-        """Fill in the geofence name, kept current after a rename in the app."""
-        return {"geofence_name": self._current_geofence.name}
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Keep the geofence name current, e.g. after a rename in the app."""
+        self._attr_translation_placeholders = {
+            "geofence_name": self._current_geofence.name
+        }
+        super()._handle_coordinator_update()
 
     @property
     def is_on(self) -> bool | None:
