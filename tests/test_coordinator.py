@@ -91,11 +91,13 @@ class TestAnioDataUpdateCoordinator:
         mock_api_client: AsyncMock,
         mock_geofence: MagicMock,
     ) -> None:
-        """Test geofences are cached."""
-        await coordinator._async_update_data()
+        """Test geofences are fetched per device and kept in its state."""
+        data = await coordinator._async_update_data()
+        coordinator.data = data
 
-        assert len(coordinator.geofences) == 1
-        assert coordinator.geofences[0].id == mock_geofence.id
+        mock_api_client.get_geofences.assert_awaited_once_with(TEST_DEVICE_ID)
+        assert [g.id for g in data[TEST_DEVICE_ID].geofences] == [mock_geofence.id]
+        assert [g.id for g in coordinator.geofences] == [mock_geofence.id]
 
     @pytest.mark.asyncio
     async def test_online_status_calculation_online(

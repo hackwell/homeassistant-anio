@@ -172,8 +172,7 @@ class TestBinarySensorSetup:
     ) -> None:
         """Test binary sensor platform setup."""
         coordinator = MagicMock()
-        coordinator.data = mock_coordinator_data
-        coordinator.geofences = [mock_geofence]
+        coordinator.data = mock_coordinator_data  # device has mock_geofence
         coordinator.is_device_in_geofence = MagicMock(return_value=True)
 
         hass.data[DOMAIN] = {
@@ -205,7 +204,6 @@ class TestBinarySensorSetup:
         """Test binary sensor platform setup with no devices."""
         coordinator = MagicMock()
         coordinator.data = {}
-        coordinator.geofences = []
 
         hass.data[DOMAIN] = {
             mock_config_entry.entry_id: {
@@ -231,23 +229,16 @@ class TestBinarySensorSetup:
     ) -> None:
         """Test binary sensor platform setup with multiple geofences."""
         geofence1 = Geofence(
-            id="geo1",
-            name="Home",
-            lat=52.5200,
-            lng=13.4050,
-            radius=100,
+            id="geo1", name="Home", location=[52.5200, 13.4050], radiusInKm=0.1
         )
         geofence2 = Geofence(
-            id="geo2",
-            name="School",
-            lat=52.5300,
-            lng=13.4100,
-            radius=200,
+            id="geo2", name="School", location=[52.5300, 13.4100], radiusInKm=0.2
         )
+        # Geofences belong to a device in the ANIO API
+        mock_coordinator_data[TEST_DEVICE_ID].geofences = [geofence1, geofence2]
 
         coordinator = MagicMock()
         coordinator.data = mock_coordinator_data
-        coordinator.geofences = [geofence1, geofence2]
         coordinator.is_device_in_geofence = MagicMock(return_value=False)
 
         hass.data[DOMAIN] = {

@@ -31,12 +31,12 @@ async def async_setup_entry(
 
     entities: list[BinarySensorEntity] = []
 
-    for device_id in coordinator.data:
+    for device_id, device_state in coordinator.data.items():
         # Add online status sensor for each device
         entities.append(AnioOnlineSensor(coordinator, device_id))
 
-        # Add geofence sensors for each device/geofence combination
-        for geofence in coordinator.geofences:
+        # Add a sensor for each geofence of this device
+        for geofence in device_state.geofences:
             entities.append(
                 AnioGeofenceSensor(coordinator, device_id, geofence)
             )
@@ -89,9 +89,19 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         self._attr_unique_id = f"{device_id}_geofence_{geofence.id}"
 
     @property
+    def _current_geofence(self) -> Geofence:
+        """Return the geofence as of the last update (e.g. after a rename)."""
+        device_state = self.device_state
+        if device_state:
+            for geofence in device_state.geofences:
+                if geofence.id == self._geofence.id:
+                    return geofence
+        return self._geofence
+
+    @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        return f"At {self._geofence.name}"
+        return f"At {self._current_geofence.name}"
 
     @property
     def is_on(self) -> bool | None:
@@ -103,9 +113,15 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return additional state attributes."""
+        geofence = self._current_geofence
         return {
-            "geofence_name": self._geofence.name,
-            "latitude": self._geofence.latitude,
-            "longitude": self._geofence.longitude,
-            "radius_meters": self._geofence.radius,
+            "geofence_name": geofence.name,
+            "latitude": geofence.latitude,
+            "longitude": geofence.longitude,
+            "radius_meters": geofence.radius,
+            # ANIO only monitors the geofence in this window; the sensor
+            # always shows whether the watch is inside.
+            "active_from": geofence.start_time,
+            "active_until": geofence.end_time,
+            "enabled_in_anio": geofence.is_enabled,
         }

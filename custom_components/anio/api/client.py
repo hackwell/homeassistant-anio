@@ -324,19 +324,21 @@ class AnioApiClient:
 
         return result
 
-    async def get_geofences(self) -> list[Geofence]:
-        """Get all geofences.
+    async def get_geofences(self, device_id: str) -> list[Geofence]:
+        """Get the geofences of a device.
+
+        Args:
+            device_id: The device ID.
 
         Returns:
             List of geofences.
         """
         try:
-            data = await self._request("GET", "/v1/geofence")
+            data = await self._request("GET", f"/v1/geofence/{device_id}")
             if not isinstance(data, list):
                 return []
         except AnioDeviceNotFoundError:
-            # 404 means no geofences exist, which is valid
-            _LOGGER.debug("No geofences found (404 response)")
+            _LOGGER.debug("No geofences for device %s (404)", device_id)
             return []
 
         # One broken geofence shouldn't stop the whole update

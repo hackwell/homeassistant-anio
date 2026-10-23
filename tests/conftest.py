@@ -135,9 +135,11 @@ def mock_geofence() -> Geofence:
     return Geofence(
         id="geofence123",
         name="Home",
-        lat=52.5200,
-        lng=13.4050,
-        radius=100,
+        location=[52.5200, 13.4050],
+        radiusInKm=0.1,
+        startTime="00:00",
+        endTime="23:59",
+        isEnabled=True,
     )
 
 
