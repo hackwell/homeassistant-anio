@@ -20,6 +20,8 @@ TOKEN_REFRESH_BUFFER: Final = 300  # Refresh 5 minutes before expiry
 # Rate limiting
 RATE_LIMIT_BACKOFF_BASE: Final = 2  # Exponential backoff base
 RATE_LIMIT_MAX_RETRIES: Final = 5
+# Longer Retry-After waits fail the request instead of blocking the update
+RATE_LIMIT_MAX_WAIT: Final = 60
 
 # Configuration keys
 CONF_ACCESS_TOKEN: Final = "access_token"

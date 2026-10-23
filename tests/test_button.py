@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from homeassistant.components.button import ButtonDeviceClass
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -125,9 +124,8 @@ class TestAnioPowerOffButton:
         assert power_off_button.entity_category == EntityCategory.CONFIG
 
     def test_device_class(self, power_off_button: AnioPowerOffButton) -> None:
-        """Test device class."""
-        # Power off is a restart-type action
-        assert power_off_button.device_class == ButtonDeviceClass.RESTART
+        """Test power off has no device class (it is not a restart)."""
+        assert power_off_button.device_class is None
 
     @pytest.mark.asyncio
     async def test_async_press(

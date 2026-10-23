@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp
@@ -14,6 +16,7 @@ from ..const import (
     DEFAULT_SENDER_NAME,
     RATE_LIMIT_BACKOFF_BASE,
     RATE_LIMIT_MAX_RETRIES,
+    RATE_LIMIT_MAX_WAIT,
     VALID_EMOJI_CODES,
 )
 from .exceptions import (
@@ -57,6 +60,30 @@ def _describe_parse_error(err: Exception) -> str:
     return type(err).__name__
 
 
+def _parse_retry_after(value: str | None) -> int | None:
+    """Convert a Retry-After header into seconds.
+
+    The header holds either a number of seconds or an HTTP date.
+
+    Args:
+        value: The header value.
+
+    Returns:
+        Seconds to wait, or None if the value is missing or unreadable.
+    """
+    if not value:
+        return None
+    if value.strip().isdigit():
+        return int(value)
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=UTC)
+    return max(0, round((retry_at - datetime.now(UTC)).total_seconds()))
+
+
 class AnioApiClient:
     """Client for the ANIO Cloud API."""
 
@@ -70,6 +97,8 @@ class AnioApiClient:
         self._session = session
         self._auth = auth
         self._retry_count = 0
+        # Set when the API asked for a long pause; no requests until then
+        self._rate_limited_until: datetime | None = None
         # Parse problems already reported as warning (logged once each)
         self._reported_parse_errors: set[str] = set()
 
@@ -108,13 +137,23 @@ class AnioApiClient:
             AnioRateLimitError: If rate limited.
             AnioConnectionError: If connection fails.
         """
+        if self._rate_limited_until:
+            remaining = (self._rate_limited_until - datetime.now(UTC)).total_seconds()
+            if remaining > 0:
+                raise AnioRateLimitError(
+                    "Rate limited, waiting for the ANIO API",
+                    retry_after=round(remaining),
+                )
+            self._rate_limited_until = None
+
         token = await self._auth.ensure_valid_token()
 
+        extra_headers = kwargs.pop("headers", {})
         headers = {
             "Authorization": f"Bearer {token}",
             "app-uuid": self._auth.app_uuid,
             "Content-Type": "application/json",
-            **kwargs.pop("headers", {}),
+            **extra_headers,
         }
 
         url = f"{API_URL}{endpoint}"
@@ -128,29 +167,30 @@ class AnioApiClient:
             ) as response:
                 if response.status == 429:
                     retry_after = response.headers.get("Retry-After")
-                    await self._handle_rate_limit(retry_after)
-                    # Retry the request
-                    return await self._request(method, endpoint, **kwargs)
+                else:
+                    if response.status == 401:
+                        raise AnioAuthError("Access token rejected by server")
 
-                if response.status == 401:
-                    raise AnioAuthError("Access token rejected by server")
+                    if response.status == 404:
+                        raise AnioDeviceNotFoundError("unknown")
 
-                if response.status == 404:
-                    raise AnioDeviceNotFoundError("unknown")
+                    if response.status >= 400:
+                        text = await response.text()
+                        raise AnioApiError(f"API error: {text}", response.status)
 
-                if response.status >= 400:
-                    text = await response.text()
-                    raise AnioApiError(f"API error: {text}", response.status)
+                    self._retry_count = 0  # Reset on success
 
-                self._retry_count = 0  # Reset on success
+                    if response.status == 204:
+                        return None
 
-                if response.status == 204:
-                    return None
-
-                return cast(dict | list, await response.json())
+                    return cast(dict | list, await response.json())
 
         except aiohttp.ClientError as err:
             raise AnioConnectionError(f"Connection failed: {err}") from err
+
+        # Wait only after the 429 response has been released, then retry
+        await self._handle_rate_limit(retry_after)
+        return await self._request(method, endpoint, headers=extra_headers, **kwargs)
 
     async def _handle_rate_limit(self, retry_after: str | None) -> None:
         """Handle rate limiting with exponential backoff.
@@ -167,10 +207,17 @@ class AnioApiClient:
             self._retry_count = 0
             raise AnioRateLimitError("Max retries exceeded")
 
-        if retry_after:
-            wait_time = int(retry_after)
-        else:
+        wait_time = _parse_retry_after(retry_after)
+        if wait_time is None:
             wait_time = RATE_LIMIT_BACKOFF_BASE**self._retry_count
+
+        if wait_time > RATE_LIMIT_MAX_WAIT:
+            self._retry_count = 0
+            self._rate_limited_until = datetime.now(UTC) + timedelta(seconds=wait_time)
+            _LOGGER.warning("Rate limited, pausing requests for %d seconds", wait_time)
+            raise AnioRateLimitError(
+                "Rate limited, waiting for the ANIO API", retry_after=wait_time
+            )
 
         _LOGGER.warning(
             "Rate limited, waiting %d seconds (attempt %d/%d)",

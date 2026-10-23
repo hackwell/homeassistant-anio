@@ -166,6 +166,11 @@ class AnioAuth:
                 if response.status == 401:
                     raise AnioAuthError("Invalid email or password")
 
+                if response.status == 429 or response.status >= 500:
+                    # A server problem, not wrong credentials
+                    text = await response.text()
+                    raise AnioApiError(f"Login failed: {text}", response.status)
+
                 if response.status != 200:
                     text = await response.text()
                     raise AnioAuthError(f"Login failed: {text}")
