@@ -265,6 +265,13 @@ automation:
 
 ## Troubleshooting
 
+### Diagnostics
+
+When reporting a problem, please attach the diagnostics: **Settings** → **Devices & Services** →
+**ANIO Smartwatch** → ⋮ → **Download diagnostics**. They contain firmware, capabilities,
+timestamps and error messages; e-mail, tokens, names, phone numbers, coordinates and message
+texts are removed.
+
 ### Authentication Failed
 
 - Verify your email and password are correct
