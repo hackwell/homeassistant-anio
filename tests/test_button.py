@@ -18,7 +18,7 @@ from custom_components.anio.button import (
 )
 from custom_components.anio.const import DOMAIN
 
-from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
+from .conftest import TEST_DEVICE_ID
 
 
 class TestAnioLocateButton:
@@ -47,7 +47,7 @@ class TestAnioLocateButton:
 
     def test_name(self, locate_button: AnioLocateButton) -> None:
         """Test button name."""
-        assert locate_button.name == f"{TEST_DEVICE_NAME} Locate"
+        assert locate_button.name == "Locate"
 
     def test_icon(self, locate_button: AnioLocateButton) -> None:
         """Test button icon."""
@@ -107,7 +107,7 @@ class TestAnioPowerOffButton:
 
     def test_name(self, power_off_button: AnioPowerOffButton) -> None:
         """Test button name."""
-        assert power_off_button.name == f"{TEST_DEVICE_NAME} Power Off"
+        assert power_off_button.name == "Power Off"
 
     def test_icon(self, power_off_button: AnioPowerOffButton) -> None:
         """Test button icon."""
@@ -170,7 +170,7 @@ class TestButtonSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -201,7 +201,7 @@ class TestButtonSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -238,7 +238,7 @@ class TestButtonSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -272,7 +272,7 @@ class TestAnioFlowerButton:
 
     def test_name(self, flower_button: AnioFlowerButton) -> None:
         """Test button name."""
-        assert flower_button.name == f"{TEST_DEVICE_NAME} Flower"
+        assert flower_button.name == "Flower"
 
     def test_icon(self, flower_button: AnioFlowerButton) -> None:
         """Test button icon."""

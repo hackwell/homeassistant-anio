@@ -17,7 +17,7 @@ from custom_components.anio.binary_sensor import (
 )
 from custom_components.anio.const import DOMAIN
 
-from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
+from .conftest import TEST_DEVICE_ID
 
 
 class TestAnioOnlineSensor:
@@ -43,7 +43,7 @@ class TestAnioOnlineSensor:
 
     def test_name(self, online_sensor: AnioOnlineSensor) -> None:
         """Test sensor name."""
-        assert online_sensor.name == f"{TEST_DEVICE_NAME} Online"
+        assert online_sensor.name == "Online"
 
     def test_device_class(self, online_sensor: AnioOnlineSensor) -> None:
         """Test device class."""
@@ -108,7 +108,7 @@ class TestAnioGeofenceSensor:
 
     def test_name(self, geofence_sensor: AnioGeofenceSensor, mock_geofence: Geofence) -> None:
         """Test sensor name."""
-        expected_name = f"{TEST_DEVICE_NAME} at {mock_geofence.name}"
+        expected_name = f"At {mock_geofence.name}"
         assert geofence_sensor.name == expected_name
 
     def test_device_class(self, geofence_sensor: AnioGeofenceSensor) -> None:
@@ -178,7 +178,7 @@ class TestBinarySensorSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -209,7 +209,7 @@ class TestBinarySensorSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -252,7 +252,7 @@ class TestBinarySensorSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
