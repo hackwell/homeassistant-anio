@@ -7,7 +7,7 @@ import base64
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -93,7 +93,7 @@ class AnioAuth:
 
         # Consider token invalid if it expires within the buffer period
         buffer = timedelta(seconds=TOKEN_REFRESH_BUFFER)
-        return datetime.now(timezone.utc) < (self._token_expiry - buffer)
+        return datetime.now(UTC) < (self._token_expiry - buffer)
 
     def _parse_jwt_expiry(self, token: str) -> datetime | None:
         """Parse the expiry time from a JWT token.
@@ -120,7 +120,7 @@ class AnioAuth:
             data = json.loads(decoded)
 
             if "exp" in data:
-                return datetime.fromtimestamp(data["exp"], tz=timezone.utc)
+                return datetime.fromtimestamp(data["exp"], tz=UTC)
         except (ValueError, KeyError, json.JSONDecodeError) as err:
             _LOGGER.debug("Failed to parse JWT expiry: %s", err)
 

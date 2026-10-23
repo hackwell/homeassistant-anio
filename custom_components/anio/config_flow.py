@@ -258,7 +258,7 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: Any,
+        config_entry: Any,  # noqa: ARG004
     ) -> OptionsFlow:
         """Get the options flow for this handler.
 

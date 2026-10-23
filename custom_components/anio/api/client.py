@@ -29,7 +29,6 @@ from .models import (
     Device,
     DeviceLocation,
     Geofence,
-    LocationInfo,
     SilenceTime,
 )
 

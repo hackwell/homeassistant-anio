@@ -68,12 +68,12 @@ class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
             return any(st.enabled for st in device_state.silence_times)
         return False
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Enable silence times."""
         await self._client.enable_silence_times(self._device_id)
         await self.coordinator.async_request_refresh()
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Disable silence times."""
         await self._client.disable_silence_times(self._device_id)
         await self.coordinator.async_request_refresh()
