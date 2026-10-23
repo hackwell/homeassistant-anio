@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -93,7 +93,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
 
             # Fetch activity for messages
             activity = await self.client.get_activity()
-            self._last_activity_check = datetime.now(timezone.utc)
+            self._last_activity_check = datetime.now(UTC)
 
             # Process incoming messages and fire events
             await self._process_messages(activity)
@@ -139,7 +139,8 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                 state = AnioDeviceState(
                     device=device,
                     location=location,
-                    geofences=self._get_device_geofences(device.id, location),
+                    # Inside/outside is computed on demand by is_device_in_geofence
+                    geofences=list(self._geofences),
                     last_seen=last_seen,
                     is_online=is_online,
                     battery_level_value=battery_level,
@@ -179,45 +180,8 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         if last_seen is None:
             return False
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return (now - last_seen) < ONLINE_THRESHOLD
-
-    def _get_device_geofences(
-        self,
-        device_id: str,
-        location: LocationInfo | None,
-    ) -> list[Geofence]:
-        """Get geofences with is_device_inside calculated.
-
-        Args:
-            device_id: The device ID.
-            location: Current device location.
-
-        Returns:
-            List of geofences.
-        """
-        if not location:
-            return self._geofences
-
-        # Calculate distance to each geofence
-        result = []
-        for geofence in self._geofences:
-            # Calculate if device is inside using Haversine formula
-            is_inside = self._is_inside_geofence(
-                location.latitude,
-                location.longitude,
-                geofence.latitude,
-                geofence.longitude,
-                geofence.radius,
-            )
-
-            # Create a copy with the calculated status
-            # We store this in the geofence's model_extra or a wrapper
-            result.append(geofence)
-            # Note: The actual is_inside status is calculated per-device
-            # and stored in coordinator data
-
-        return result
 
     def _is_inside_geofence(
         self,

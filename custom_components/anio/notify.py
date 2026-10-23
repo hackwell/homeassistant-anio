@@ -88,7 +88,7 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
     async def async_send_message(
         self,
         message: str,
-        title: str | None = None,
+        title: str | None = None,  # noqa: ARG002
     ) -> None:
         """Send a text message to the ANIO watch (notify.send_message).
 
