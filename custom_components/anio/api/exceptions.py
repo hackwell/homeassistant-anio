@@ -101,3 +101,16 @@ class AnioMessageTooLongError(AnioApiError):
         )
         self.length = length
         self.max_length = max_length
+
+
+class AnioInvalidEmojiError(AnioApiError):
+    """Exception for an emoji code the watch doesn't know."""
+
+    def __init__(self, emoji_code: str) -> None:
+        """Initialize the exception.
+
+        Args:
+            emoji_code: The invalid emoji code.
+        """
+        super().__init__(f"Invalid emoji code: {emoji_code}", status_code=400)
+        self.emoji_code = emoji_code

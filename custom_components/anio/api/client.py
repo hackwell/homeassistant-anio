@@ -21,6 +21,7 @@ from .exceptions import (
     AnioAuthError,
     AnioConnectionError,
     AnioDeviceNotFoundError,
+    AnioInvalidEmojiError,
     AnioMessageTooLongError,
     AnioRateLimitError,
 )
@@ -290,9 +291,7 @@ class AnioApiClient:
             AnioApiError: If invalid emoji code.
         """
         if emoji_code not in VALID_EMOJI_CODES:
-            raise AnioApiError(
-                f"Invalid emoji code: {emoji_code}. Valid codes: {VALID_EMOJI_CODES}"
-            )
+            raise AnioInvalidEmojiError(emoji_code)
 
         payload: dict[str, str] = {
             "deviceId": device_id,

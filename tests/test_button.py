@@ -8,6 +8,7 @@ import pytest
 from homeassistant.components.button import ButtonDeviceClass
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.anio.api import AnioApiError
 from custom_components.anio.button import (
@@ -84,7 +85,7 @@ class TestAnioRingButton:
         """Test API error when pressing the ring button."""
         mock_api_client.find_device.side_effect = AnioApiError("API Error")
 
-        with pytest.raises(AnioApiError):
+        with pytest.raises(HomeAssistantError):
             await ring_button.async_press()
 
 
@@ -148,7 +149,7 @@ class TestAnioPowerOffButton:
         """Test API error when pressing power off button."""
         mock_api_client.power_off_device.side_effect = AnioApiError("API Error")
 
-        with pytest.raises(AnioApiError):
+        with pytest.raises(HomeAssistantError):
             await power_off_button.async_press()
 
 
@@ -342,5 +343,5 @@ class TestAnioFlowerButton:
         from custom_components.anio.api import AnioApiError
 
         mock_api_client.send_flower.side_effect = AnioApiError("API Error")
-        with pytest.raises(AnioApiError):
+        with pytest.raises(HomeAssistantError):
             await flower_button.async_press()

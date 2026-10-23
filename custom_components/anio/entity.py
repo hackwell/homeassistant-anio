@@ -2,23 +2,81 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .api import (
+    AnioApiError,
+    AnioAuthError,
+    AnioConnectionError,
+    AnioInvalidEmojiError,
+    AnioMessageTooLongError,
+    AnioRateLimitError,
+)
+from .const import DOMAIN, VALID_EMOJI_CODES
 
 if TYPE_CHECKING:
     from .api import AnioDeviceState, Geofence
     from .coordinator import AnioDataUpdateCoordinator
 else:
     from .api import Geofence
+
+
+@contextmanager
+def translate_api_errors() -> Iterator[None]:
+    """Turn API errors of an action into translated Home Assistant errors.
+
+    Invalid input (message too long, unknown emoji) becomes a
+    ServiceValidationError, everything else a HomeAssistantError, so the user
+    sees a readable message instead of a stack trace.
+    """
+    try:
+        yield
+    except AnioMessageTooLongError as err:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="message_too_long",
+            translation_placeholders={
+                "length": str(err.length),
+                "max_length": str(err.max_length),
+            },
+        ) from err
+    except AnioInvalidEmojiError as err:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="invalid_emoji",
+            translation_placeholders={
+                "code": err.emoji_code,
+                "valid_codes": ", ".join(VALID_EMOJI_CODES),
+            },
+        ) from err
+    except AnioAuthError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="auth_failed"
+        ) from err
+    except AnioRateLimitError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="rate_limited"
+        ) from err
+    except AnioConnectionError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN, translation_key="cannot_connect"
+        ) from err
+    except AnioApiError as err:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="api_error",
+            translation_placeholders={"error": str(err)},
+        ) from err
 
 
 @callback

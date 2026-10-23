@@ -6,11 +6,12 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.components.notify import ATTR_MESSAGE, ATTR_TARGET
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.anio.api import (
     AnioApiError,
+    AnioInvalidEmojiError,
     AnioMessageTooLongError,
     ChatMessage,
 )
@@ -81,6 +82,7 @@ class TestAnioNotifyEntity:
             TEST_DEVICE_ID,
             "Hello!",
             username=None,
+            max_length=95,
         )
 
     @pytest.mark.asyncio
@@ -109,6 +111,7 @@ class TestAnioNotifyEntity:
             TEST_DEVICE_ID,
             "Hello!",
             username="Mom",
+            max_length=95,
         )
 
     @pytest.mark.asyncio
@@ -167,8 +170,14 @@ class TestAnioNotifyEntity:
             max_length=95,
         )
 
-        with pytest.raises(AnioMessageTooLongError):
+        with pytest.raises(ServiceValidationError) as exc_info:
             await notify_entity.async_send_message("x" * 100)
+
+        assert exc_info.value.translation_key == "message_too_long"
+        assert exc_info.value.translation_placeholders == {
+            "length": "100",
+            "max_length": "95",
+        }
 
     @pytest.mark.asyncio
     async def test_send_message_api_error(
@@ -179,8 +188,10 @@ class TestAnioNotifyEntity:
         """Test API error handling."""
         mock_api_client.send_text_message.side_effect = AnioApiError("API Error")
 
-        with pytest.raises(AnioApiError):
+        with pytest.raises(HomeAssistantError) as exc_info:
             await notify_entity.async_send_message("Hello!")
+
+        assert exc_info.value.translation_key == "api_error"
 
     @pytest.mark.asyncio
     async def test_message_text_not_logged(
@@ -210,6 +221,7 @@ class TestAnioNotifyEntity:
             TEST_DEVICE_ID,
             "Hello!",
             username=None,
+            max_length=95,
         )
         mock_api_client.send_emoji_message.assert_not_called()
 
@@ -374,12 +386,13 @@ class TestNotifyServiceValidation:
         mock_api_client: AsyncMock,
     ) -> None:
         """Test sending an invalid emoji code."""
-        mock_api_client.send_emoji_message.side_effect = AnioApiError(
-            "Invalid emoji code"
-        )
+        mock_api_client.send_emoji_message.side_effect = AnioInvalidEmojiError("E99")
 
-        with pytest.raises(AnioApiError, match="Invalid emoji code"):
+        with pytest.raises(ServiceValidationError) as exc_info:
             await notify_entity.async_send_anio_message("E99", message_type="emoji")
+
+        assert exc_info.value.translation_key == "invalid_emoji"
+        assert exc_info.value.translation_placeholders["code"] == "E99"
 
     @pytest.mark.asyncio
     async def test_valid_emoji_codes(

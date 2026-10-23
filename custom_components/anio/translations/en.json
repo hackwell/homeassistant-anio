@@ -118,25 +118,17 @@
       "name": "Send Message",
       "description": "Send a text or emoji message to an ANIO watch.",
       "fields": {
-        "device_id": {
-          "name": "Device",
-          "description": "The target ANIO watch."
-        },
         "message": {
           "name": "Message",
-          "description": "The message text to send (max 95 characters)."
+          "description": "Text (max. 95 characters) or emoji code (E01-E09)."
         },
         "message_type": {
-          "name": "Message Type",
-          "description": "Type of message (text or emoji)."
-        },
-        "emoji_code": {
-          "name": "Emoji Code",
-          "description": "Emoji code (E01-E12) when message_type is emoji."
+          "name": "Message type",
+          "description": "Text or emoji."
         },
         "username": {
-          "name": "Sender Name",
-          "description": "Name to show as sender on the watch."
+          "name": "Sender name",
+          "description": "Shown as the sender on the watch. Defaults to \"Home Assistant\"; the watch needs a sender name to display the message."
         }
       }
     }
@@ -149,7 +141,16 @@
       "message": "Message is too long ({length} characters). Maximum is {max_length} characters."
     },
     "invalid_emoji": {
-      "message": "Invalid emoji code. Valid codes are E01-E12."
+      "message": "Unknown emoji code {code}. Valid codes: {valid_codes}."
+    },
+    "auth_failed": {
+      "message": "ANIO rejected the login. Please re-authenticate the integration."
+    },
+    "rate_limited": {
+      "message": "Too many requests to ANIO. Please try again later."
+    },
+    "cannot_connect": {
+      "message": "Cannot connect to the ANIO cloud."
     },
     "api_error": {
       "message": "Error communicating with ANIO: {error}"

@@ -116,27 +116,19 @@
   "services": {
     "send_message": {
       "name": "Nachricht senden",
-      "description": "Sende eine Text- oder Emoji-Nachricht an eine ANIO-Uhr.",
+      "description": "Sendet eine Text- oder Emoji-Nachricht an eine ANIO-Uhr.",
       "fields": {
-        "device_id": {
-          "name": "Gerät",
-          "description": "Die Ziel-ANIO-Uhr."
-        },
         "message": {
           "name": "Nachricht",
-          "description": "Der zu sendende Nachrichtentext (max. 95 Zeichen)."
+          "description": "Text (max. 95 Zeichen) oder Emoji-Code (E01-E09)."
         },
         "message_type": {
           "name": "Nachrichtentyp",
-          "description": "Art der Nachricht (Text oder Emoji)."
-        },
-        "emoji_code": {
-          "name": "Emoji-Code",
-          "description": "Emoji-Code (E01-E12), wenn der Nachrichtentyp Emoji ist."
+          "description": "Text oder Emoji."
         },
         "username": {
           "name": "Absendername",
-          "description": "Name, der auf der Uhr als Absender angezeigt wird."
+          "description": "Wird auf der Uhr als Absender angezeigt. Standard ist \"Home Assistant\"; ohne Absender kann die Uhr die Nachricht nicht anzeigen."
         }
       }
     }
@@ -149,7 +141,16 @@
       "message": "Nachricht ist zu lang ({length} Zeichen). Maximum sind {max_length} Zeichen."
     },
     "invalid_emoji": {
-      "message": "Ungültiger Emoji-Code. Gültige Codes sind E01-E12."
+      "message": "Unbekannter Emoji-Code {code}. Gültige Codes: {valid_codes}."
+    },
+    "auth_failed": {
+      "message": "ANIO hat die Anmeldung abgelehnt. Bitte melde die Integration neu an."
+    },
+    "rate_limited": {
+      "message": "Zu viele Anfragen an ANIO. Bitte versuche es später erneut."
+    },
+    "cannot_connect": {
+      "message": "Keine Verbindung zur ANIO-Cloud."
     },
     "api_error": {
       "message": "Fehler bei der Kommunikation mit ANIO: {error}"
