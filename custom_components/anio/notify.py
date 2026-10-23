@@ -67,6 +67,8 @@ async def async_setup_entry(
 class AnioNotifyEntity(AnioEntity, NotifyEntity):
     """Notify entity for sending messages to ANIO watch."""
 
+    _attr_translation_key = "message"
+
     def __init__(
         self,
         coordinator: AnioDataUpdateCoordinator,
@@ -83,11 +85,6 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         super().__init__(coordinator, device_id)
         self._client = client
         self._attr_unique_id = f"{device_id}_notify"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        return "Message"
 
     async def async_send_message(
         self,

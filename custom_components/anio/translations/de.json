@@ -50,13 +50,22 @@
   "entity": {
     "sensor": {
       "battery": {
-        "name": "Batterie"
+        "name": "Akku"
       },
       "last_seen": {
         "name": "Zuletzt gesehen"
       },
-      "steps": {
-        "name": "Schritte"
+      "signal_strength": {
+        "name": "Signalstärke"
+      },
+      "last_message": {
+        "name": "Letzte Nachricht"
+      },
+      "next_alarm": {
+        "name": "Nächster Wecker"
+      },
+      "tracking_mode": {
+        "name": "Ortungsmodus"
       }
     },
     "binary_sensor": {
@@ -64,7 +73,7 @@
         "name": "Online"
       },
       "geofence": {
-        "name": "Bei {geofence_name}"
+        "name": "Im Bereich {geofence_name}"
       }
     },
     "device_tracker": {
@@ -73,16 +82,34 @@
       }
     },
     "button": {
-      "locate": {
+      "ring": {
         "name": "Klingeln lassen"
       },
       "power_off": {
         "name": "Ausschalten"
+      },
+      "flower": {
+        "name": "Blume"
       }
     },
     "notify": {
       "message": {
-        "name": "Nachricht senden"
+        "name": "Nachricht"
+      }
+    },
+    "switch": {
+      "silence_time": {
+        "name": "Ruhezeit"
+      }
+    },
+    "select": {
+      "ring_profile": {
+        "name": "Klingelprofil",
+        "state": {
+          "RING_AND_VIBRATE": "Klingeln und vibrieren",
+          "VIBRATE_ONLY": "Nur vibrieren",
+          "SILENT": "Lautlos"
+        }
       }
     }
   },

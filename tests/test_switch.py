@@ -46,7 +46,7 @@ class TestAnioSilenceTimeSwitch:
 
     def test_name(self, silence_switch: AnioSilenceTimeSwitch) -> None:
         """Test switch name."""
-        assert silence_switch.name == "Silence Time"
+        assert silence_switch.translation_key == "silence_time"
 
     def test_icon(self, silence_switch: AnioSilenceTimeSwitch) -> None:
         """Test switch icon."""

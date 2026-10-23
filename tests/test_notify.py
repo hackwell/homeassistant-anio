@@ -54,7 +54,7 @@ class TestAnioNotifyEntity:
 
     def test_name(self, notify_entity: AnioNotifyEntity) -> None:
         """Test entity name."""
-        assert notify_entity.name == "Message"
+        assert notify_entity.translation_key == "message"
 
     @pytest.mark.asyncio
     async def test_send_text_message_success(

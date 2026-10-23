@@ -55,8 +55,17 @@
       "last_seen": {
         "name": "Last Seen"
       },
-      "steps": {
-        "name": "Steps"
+      "signal_strength": {
+        "name": "Signal Strength"
+      },
+      "last_message": {
+        "name": "Last Message"
+      },
+      "next_alarm": {
+        "name": "Next Alarm"
+      },
+      "tracking_mode": {
+        "name": "Tracking Mode"
       }
     },
     "binary_sensor": {
@@ -73,16 +82,34 @@
       }
     },
     "button": {
-      "locate": {
+      "ring": {
         "name": "Ring"
       },
       "power_off": {
         "name": "Power Off"
+      },
+      "flower": {
+        "name": "Flower"
       }
     },
     "notify": {
       "message": {
-        "name": "Send Message"
+        "name": "Message"
+      }
+    },
+    "switch": {
+      "silence_time": {
+        "name": "Silence Time"
+      }
+    },
+    "select": {
+      "ring_profile": {
+        "name": "Ring Profile",
+        "state": {
+          "RING_AND_VIBRATE": "Ring and vibrate",
+          "VIBRATE_ONLY": "Vibrate only",
+          "SILENT": "Silent"
+        }
       }
     }
   },

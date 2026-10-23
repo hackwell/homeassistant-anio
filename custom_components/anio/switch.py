@@ -41,6 +41,8 @@ async def async_setup_entry(
 class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
     """Switch entity for toggling silence times on the ANIO watch."""
 
+    _attr_translation_key = "silence_time"
+
     _attr_icon = "mdi:volume-off"
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -54,11 +56,6 @@ class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
         super().__init__(coordinator, device_id)
         self._client = client
         self._attr_unique_id = f"{device_id}_silence_time"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the switch."""
-        return "Silence Time"
 
     @property
     def is_on(self) -> bool:

@@ -53,7 +53,7 @@ class TestAnioRingButton:
 
     def test_name(self, ring_button: AnioRingButton) -> None:
         """Test button name."""
-        assert ring_button.name == "Ring"
+        assert ring_button.translation_key == "ring"
 
     def test_icon(self, ring_button: AnioRingButton) -> None:
         """Test button icon."""
@@ -113,7 +113,7 @@ class TestAnioPowerOffButton:
 
     def test_name(self, power_off_button: AnioPowerOffButton) -> None:
         """Test button name."""
-        assert power_off_button.name == "Power Off"
+        assert power_off_button.translation_key == "power_off"
 
     def test_icon(self, power_off_button: AnioPowerOffButton) -> None:
         """Test button icon."""
@@ -278,7 +278,7 @@ class TestAnioFlowerButton:
 
     def test_name(self, flower_button: AnioFlowerButton) -> None:
         """Test button name."""
-        assert flower_button.name == "Flower"
+        assert flower_button.translation_key == "flower"
 
     def test_icon(self, flower_button: AnioFlowerButton) -> None:
         """Test button icon."""

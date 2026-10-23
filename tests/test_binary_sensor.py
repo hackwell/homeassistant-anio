@@ -49,7 +49,7 @@ class TestAnioOnlineSensor:
 
     def test_name(self, online_sensor: AnioOnlineSensor) -> None:
         """Test sensor name."""
-        assert online_sensor.name == "Online"
+        assert online_sensor.translation_key == "online"
 
     def test_device_class(self, online_sensor: AnioOnlineSensor) -> None:
         """Test device class."""
@@ -114,8 +114,10 @@ class TestAnioGeofenceSensor:
 
     def test_name(self, geofence_sensor: AnioGeofenceSensor, mock_geofence: Geofence) -> None:
         """Test sensor name."""
-        expected_name = f"At {mock_geofence.name}"
-        assert geofence_sensor.name == expected_name
+        assert geofence_sensor.translation_key == "geofence"
+        assert geofence_sensor.translation_placeholders == {
+            "geofence_name": mock_geofence.name
+        }
 
     def test_device_class(self, geofence_sensor: AnioGeofenceSensor) -> None:
         """Test device class."""

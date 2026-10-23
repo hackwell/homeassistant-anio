@@ -35,6 +35,8 @@ async def async_setup_entry(
 class AnioDeviceTracker(AnioEntity, TrackerEntity):
     """Device tracker entity for ANIO watch location."""
 
+    _attr_translation_key = "location"
+
     def __init__(
         self,
         coordinator: AnioDataUpdateCoordinator,
@@ -48,11 +50,6 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
         """
         super().__init__(coordinator, device_id)
         self._attr_unique_id = f"{device_id}_location"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the tracker."""
-        return "Location"
 
     @property
     def source_type(self) -> SourceType:

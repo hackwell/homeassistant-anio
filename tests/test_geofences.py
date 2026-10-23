@@ -121,5 +121,5 @@ class TestGeofenceSensor:
         renamed = Geofence.model_validate({**API_GEOFENCE, "name": "Zuhause"})
         sensor.coordinator.data[TEST_DEVICE_ID].geofences = [renamed]
 
-        assert sensor.name == "At Zuhause"
+        assert sensor.translation_placeholders == {"geofence_name": "Zuhause"}
         assert sensor.extra_state_attributes["geofence_name"] == "Zuhause"

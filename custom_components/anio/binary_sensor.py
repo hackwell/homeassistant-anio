@@ -47,6 +47,8 @@ async def async_setup_entry(
 class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
     """Binary sensor entity for ANIO watch online status."""
 
+    _attr_translation_key = "online"
+
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -58,11 +60,6 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
         """Initialize the online sensor."""
         super().__init__(coordinator, device_id)
         self._attr_unique_id = f"{device_id}_online"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return "Online"
 
     @property
     def is_on(self) -> bool | None:
@@ -77,6 +74,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
     """Binary sensor entity for ANIO geofence presence."""
 
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
+    _attr_translation_key = "geofence"
 
     def __init__(
         self,
@@ -99,9 +97,9 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         return self._geofence
 
     @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return f"At {self._current_geofence.name}"
+    def translation_placeholders(self) -> dict[str, str]:
+        """Fill in the geofence name, kept current after a rename in the app."""
+        return {"geofence_name": self._current_geofence.name}
 
     @property
     def is_on(self) -> bool | None:

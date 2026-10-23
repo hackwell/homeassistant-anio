@@ -63,7 +63,10 @@ After setup, you can configure the following options:
 
 ## Entities
 
-For each watch, the integration creates the following entities:
+For each watch, the integration creates the following entities. Their names are
+translated (English and German). The entity IDs below are the English ones; a new
+installation with Home Assistant set to German gets German IDs (e.g.
+`sensor.<name>_akku`). Existing installations keep their entity IDs.
 
 ### Sensors
 

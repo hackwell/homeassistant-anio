@@ -53,7 +53,7 @@ class TestAnioBatterySensor:
 
     def test_name(self, battery_sensor: AnioBatterySensor) -> None:
         """Test sensor name."""
-        assert battery_sensor.name == "Battery"
+        assert battery_sensor.translation_key == "battery"
 
     def test_device_class(self, battery_sensor: AnioBatterySensor) -> None:
         """Test device class."""
@@ -110,7 +110,7 @@ class TestAnioLastSeenSensor:
 
     def test_name(self, last_seen_sensor: AnioLastSeenSensor) -> None:
         """Test sensor name."""
-        assert last_seen_sensor.name == "Last Seen"
+        assert last_seen_sensor.translation_key == "last_seen"
 
     def test_device_class(self, last_seen_sensor: AnioLastSeenSensor) -> None:
         """Test device class."""
@@ -222,7 +222,7 @@ class TestAnioSignalStrengthSensor:
 
     def test_name(self, signal_sensor: AnioSignalStrengthSensor) -> None:
         """Test sensor name."""
-        assert signal_sensor.name == "Signal Strength"
+        assert signal_sensor.translation_key == "signal_strength"
 
     def test_icon(self, signal_sensor: AnioSignalStrengthSensor) -> None:
         """Test sensor icon."""
@@ -278,7 +278,7 @@ class TestAnioLastMessageSensor:
 
     def test_name(self, message_sensor: AnioLastMessageSensor) -> None:
         """Test sensor name."""
-        assert message_sensor.name == "Last Message"
+        assert message_sensor.translation_key == "last_message"
 
     def test_icon(self, message_sensor: AnioLastMessageSensor) -> None:
         """Test sensor icon."""
@@ -332,7 +332,7 @@ class TestAnioNextAlarmSensor:
 
     def test_name(self, alarm_sensor: AnioNextAlarmSensor) -> None:
         """Test sensor name."""
-        assert alarm_sensor.name == "Next Alarm"
+        assert alarm_sensor.translation_key == "next_alarm"
 
     def test_icon(self, alarm_sensor: AnioNextAlarmSensor) -> None:
         """Test sensor icon."""
@@ -384,7 +384,7 @@ class TestAnioTrackingModeSensor:
 
     def test_name(self, tracking_sensor: AnioTrackingModeSensor) -> None:
         """Test sensor name."""
-        assert tracking_sensor.name == "Tracking Mode"
+        assert tracking_sensor.translation_key == "tracking_mode"
 
     def test_icon(self, tracking_sensor: AnioTrackingModeSensor) -> None:
         """Test sensor icon."""
