@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import AnioApiClient, AnioAuth
@@ -112,6 +113,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow removing a watch that is no longer part of the ANIO account.
+
+    Args:
+        hass: Home Assistant instance.
+        entry: Config entry.
+        device_entry: The device to remove.
+
+    Returns:
+        True if the device may be removed.
+    """
+    coordinator: AnioDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+        "coordinator"
+    ]
+    current = coordinator.data or {}
+    return not any(
+        domain == DOMAIN and device_id in current
+        for domain, device_id in device_entry.identifiers
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

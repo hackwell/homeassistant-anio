@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -14,6 +19,37 @@ if TYPE_CHECKING:
     from .coordinator import AnioDataUpdateCoordinator
 else:
     from .api import Geofence
+
+
+@callback
+def async_setup_device_entities(
+    entry: ConfigEntry,
+    coordinator: AnioDataUpdateCoordinator,
+    async_add_entities: AddEntitiesCallback,
+    create_entities: Callable[[str], Iterable[Entity]],
+) -> None:
+    """Add the entities of each watch, also for watches added to the account later.
+
+    Args:
+        entry: Config entry.
+        coordinator: The data update coordinator.
+        async_add_entities: Callback to add entities.
+        create_entities: Creates the entities of one device ID.
+    """
+    known: set[str] = set()
+
+    @callback
+    def _add_new_devices() -> None:
+        new_devices = [d for d in (coordinator.data or {}) if d not in known]
+        if not new_devices:
+            return
+        known.update(new_devices)
+        async_add_entities(
+            [entity for device_id in new_devices for entity in create_entities(device_id)]
+        )
+
+    _add_new_devices()
+    entry.async_on_unload(coordinator.async_add_listener(_add_new_devices))
 
 
 class AnioEntity(CoordinatorEntity["AnioDataUpdateCoordinator"]):

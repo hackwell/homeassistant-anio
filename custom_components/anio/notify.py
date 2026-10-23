@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity
+from .entity import AnioEntity, async_setup_device_entities
 
 try:
     import probatio as vol
@@ -41,14 +41,12 @@ async def async_setup_entry(
     ]
     client: AnioApiClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
-    entities: list[NotifyEntity] = []
-
-    for device_id in coordinator.data:
-        entities.append(
-            AnioNotifyEntity(coordinator, client, device_id)
-        )
-
-    async_add_entities(entities)
+    async_setup_device_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda device_id: [AnioNotifyEntity(coordinator, client, device_id)],
+    )
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(

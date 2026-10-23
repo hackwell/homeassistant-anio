@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import Geofence
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity, AnioGeofenceEntity
+from .entity import AnioEntity, AnioGeofenceEntity, async_setup_device_entities
 
 
 async def async_setup_entry(
@@ -29,19 +29,31 @@ async def async_setup_entry(
         "coordinator"
     ]
 
-    entities: list[BinarySensorEntity] = []
+    # Online status sensor for each watch
+    async_setup_device_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda device_id: [AnioOnlineSensor(coordinator, device_id)],
+    )
 
-    for device_id, device_state in coordinator.data.items():
-        # Add online status sensor for each device
-        entities.append(AnioOnlineSensor(coordinator, device_id))
+    # A sensor for each geofence, also for geofences added in the app later
+    known_geofences: set[tuple[str, str]] = set()
 
-        # Add a sensor for each geofence of this device
-        for geofence in device_state.geofences:
-            entities.append(
-                AnioGeofenceSensor(coordinator, device_id, geofence)
-            )
+    @callback
+    def _add_new_geofences() -> None:
+        new: list[BinarySensorEntity] = []
+        for device_id, device_state in (coordinator.data or {}).items():
+            for geofence in device_state.geofences:
+                if (device_id, geofence.id) in known_geofences:
+                    continue
+                known_geofences.add((device_id, geofence.id))
+                new.append(AnioGeofenceSensor(coordinator, device_id, geofence))
+        if new:
+            async_add_entities(new)
 
-    async_add_entities(entities)
+    _add_new_geofences()
+    entry.async_on_unload(coordinator.async_add_listener(_add_new_geofences))
 
 
 class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
@@ -96,6 +108,15 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
                 if geofence.id == self._geofence.id:
                     return geofence
         return self._geofence
+
+    @property
+    def available(self) -> bool:
+        """Return False once the geofence was deleted in the ANIO app."""
+        device_state = self.device_state
+        return super().available and any(
+            geofence.id == self._geofence.id
+            for geofence in (device_state.geofences if device_state else [])
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
