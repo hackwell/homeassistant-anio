@@ -15,6 +15,7 @@ from custom_components.anio.api import (
     AnioConnectionError,
     AnioRateLimitError,
 )
+from custom_components.anio.api.models import ActivityItem
 from custom_components.anio.coordinator import AnioDataUpdateCoordinator
 
 from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
