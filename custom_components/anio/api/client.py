@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from ..const import (
     API_URL,
+    DEFAULT_SENDER_NAME,
     RATE_LIMIT_BACKOFF_BASE,
     RATE_LIMIT_MAX_RETRIES,
     VALID_EMOJI_CODES,
@@ -246,7 +247,7 @@ class AnioApiClient:
         Args:
             device_id: The device ID.
             text: Message text.
-            username: Optional sender name.
+            username: Sender name shown on the watch (default "Home Assistant").
             max_length: Maximum message length.
 
         Returns:
@@ -261,9 +262,8 @@ class AnioApiClient:
         payload: dict[str, str] = {
             "deviceId": device_id,
             "text": text,
+            "username": username or DEFAULT_SENDER_NAME,
         }
-        if username:
-            payload["username"] = username
 
         data = await self._request("POST", "/v1/chat/message/text", json=payload)
         return ChatMessage.model_validate(data)
@@ -279,7 +279,7 @@ class AnioApiClient:
         Args:
             device_id: The device ID.
             emoji_code: Emoji code (E01-E12).
-            username: Optional sender name.
+            username: Sender name shown on the watch (default "Home Assistant").
 
         Returns:
             The created message.
@@ -295,9 +295,8 @@ class AnioApiClient:
         payload: dict[str, str] = {
             "deviceId": device_id,
             "text": emoji_code,
+            "username": username or DEFAULT_SENDER_NAME,
         }
-        if username:
-            payload["username"] = username
 
         data = await self._request("POST", "/v1/chat/message/emoji", json=payload)
         return ChatMessage.model_validate(data)

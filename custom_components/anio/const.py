@@ -45,7 +45,13 @@ SENDER_WATCH: Final = "WATCH"
 SENDER_DEVICE: Final = "DEVICE"
 
 # Emoji codes
-VALID_EMOJI_CODES: Final = [f"E{i:02d}" for i in range(1, 13)]  # E01-E12
+# Emoji codes in the order of the ANIO app's emoji bar:
+# E01 🙂, E02 😘, E03 😎, E04 🙁, E05 😁, E06 😛, E07 👎, E08 👍, E09 ❤️
+VALID_EMOJI_CODES: Final = [f"E{i:02d}" for i in range(1, 10)]
+
+# The watch can't display messages without a sender name: text arrives as a
+# digit code and emojis as a heart. The ANIO app always sends one.
+DEFAULT_SENDER_NAME: Final = "Home Assistant"
 
 # Event types
 EVENT_MESSAGE_RECEIVED: Final = f"{DOMAIN}_message_received"

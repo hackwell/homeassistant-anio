@@ -135,6 +135,24 @@ class TestAnioNotifyEntity:
         mock_api_client.send_emoji_message.assert_called_once_with(
             TEST_DEVICE_ID,
             "E01",
+            username=None,
+        )
+
+    @pytest.mark.asyncio
+    async def test_send_emoji_message_with_username(
+        self,
+        notify_entity: AnioNotifyEntity,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test the sender name is passed on for emojis too."""
+        await notify_entity.async_send_anio_message(
+            "E09", message_type="emoji", username="Papa"
+        )
+
+        mock_api_client.send_emoji_message.assert_called_once_with(
+            TEST_DEVICE_ID,
+            "E09",
+            username="Papa",
         )
 
     @pytest.mark.asyncio
@@ -369,7 +387,7 @@ class TestNotifyServiceValidation:
         notify_entity: AnioNotifyEntity,
         mock_api_client: AsyncMock,
     ) -> None:
-        """Test all valid emoji codes E01-E12."""
+        """Test all valid emoji codes E01-E09."""
         mock_message = ChatMessage(
             id="msg123",
             device_id=TEST_DEVICE_ID,
@@ -382,10 +400,10 @@ class TestNotifyServiceValidation:
         )
         mock_api_client.send_emoji_message.return_value = mock_message
 
-        for i in range(1, 13):
+        for i in range(1, 10):
             emoji_code = f"E{i:02d}"
             await notify_entity.async_send_anio_message(
                 emoji_code, message_type="emoji"
             )
 
-        assert mock_api_client.send_emoji_message.call_count == 12
+        assert mock_api_client.send_emoji_message.call_count == 9

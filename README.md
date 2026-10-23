@@ -145,20 +145,23 @@ data:
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `message` | Yes | Text message (max 95 chars) or emoji code (E01-E12) |
+| `message` | Yes | Text message (max 95 chars) or emoji code (E01-E09) |
 | `message_type` | No | `text` (default) or `emoji` |
-| `username` | No | Custom sender name shown on watch (text messages only) |
+| `username` | No | Sender name shown on the watch, default `Home Assistant` |
+
+The watch needs a sender name to display a message: without one, text arrives as
+a digit code and emojis as a heart. The integration therefore always sends one,
+also for `notify.send_message` (`Home Assistant`).
 
 #### Emoji Codes
 
-| Code | Emoji | Code | Emoji |
-|------|-------|------|-------|
-| E01 | Happy | E07 | Sleepy |
-| E02 | Love | E08 | Hungry |
-| E03 | Laugh | E09 | Cool |
-| E04 | Wink | E10 | Confused |
-| E05 | Sad | E11 | Sick |
-| E06 | Angry | E12 | Celebrate |
+The same emojis as in the ANIO app's emoji bar:
+
+| Code | Emoji | Code | Emoji | Code | Emoji |
+|------|-------|------|-------|------|-------|
+| E01 | 🙂 | E04 | 🙁 | E07 | 👎 |
+| E02 | 😘 | E05 | 😁 | E08 | 👍 |
+| E03 | 😎 | E06 | 😛 | E09 | ❤️ |
 
 ## Events
 
