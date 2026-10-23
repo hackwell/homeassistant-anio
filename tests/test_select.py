@@ -46,7 +46,7 @@ class TestAnioRingProfileSelect:
 
     def test_name(self, ring_select: AnioRingProfileSelect) -> None:
         """Test select name."""
-        assert ring_select.name == "Ring Profile"
+        assert ring_select.translation_key == "ring_profile"
 
     def test_icon(self, ring_select: AnioRingProfileSelect) -> None:
         """Test select icon."""

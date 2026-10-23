@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import Geofence
@@ -47,6 +47,8 @@ async def async_setup_entry(
 class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
     """Binary sensor entity for ANIO watch online status."""
 
+    _attr_translation_key = "online"
+
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -58,11 +60,6 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
         """Initialize the online sensor."""
         super().__init__(coordinator, device_id)
         self._attr_unique_id = f"{device_id}_online"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return "Online"
 
     @property
     def is_on(self) -> bool | None:
@@ -77,6 +74,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
     """Binary sensor entity for ANIO geofence presence."""
 
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
+    _attr_translation_key = "geofence"
 
     def __init__(
         self,
@@ -87,6 +85,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         """Initialize the geofence sensor."""
         super().__init__(coordinator, device_id, geofence)
         self._attr_unique_id = f"{device_id}_geofence_{geofence.id}"
+        self._attr_translation_placeholders = {"geofence_name": geofence.name}
 
     @property
     def _current_geofence(self) -> Geofence:
@@ -98,10 +97,13 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
                     return geofence
         return self._geofence
 
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return f"At {self._current_geofence.name}"
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Keep the geofence name current, e.g. after a rename in the app."""
+        self._attr_translation_placeholders = {
+            "geofence_name": self._current_geofence.name
+        }
+        super()._handle_coordinator_update()
 
     @property
     def is_on(self) -> bool | None:

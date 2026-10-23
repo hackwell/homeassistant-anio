@@ -40,6 +40,8 @@ async def async_setup_entry(
 class AnioRingProfileSelect(AnioEntity, SelectEntity):
     """Select entity for the ANIO watch ring profile."""
 
+    _attr_translation_key = "ring_profile"
+
     _attr_icon = "mdi:bell-ring"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_options = RING_PROFILES
@@ -54,11 +56,6 @@ class AnioRingProfileSelect(AnioEntity, SelectEntity):
         super().__init__(coordinator, device_id)
         self._client = client
         self._attr_unique_id = f"{device_id}_ring_profile"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the select."""
-        return "Ring Profile"
 
     @property
     def current_option(self) -> str | None:

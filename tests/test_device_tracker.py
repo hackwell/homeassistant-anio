@@ -48,7 +48,7 @@ class TestAnioDeviceTracker:
 
     def test_name(self, device_tracker: AnioDeviceTracker) -> None:
         """Test tracker name."""
-        assert device_tracker.name == "Location"
+        assert device_tracker.translation_key == "location"
 
     def test_source_type(self, device_tracker: AnioDeviceTracker) -> None:
         """Test source type is GPS."""

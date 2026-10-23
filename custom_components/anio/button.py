@@ -51,6 +51,8 @@ class AnioRingButton(AnioEntity, ButtonEntity):
     position on its own interval (60 minutes by default on the ANIO 6).
     """
 
+    _attr_translation_key = "ring"
+
     _attr_icon = "mdi:bell-ring"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -72,11 +74,6 @@ class AnioRingButton(AnioEntity, ButtonEntity):
         # Kept from the former "Locate" button so entity IDs don't change
         self._attr_unique_id = f"{device_id}_locate"
 
-    @property
-    def name(self) -> str:
-        """Return the name of the button."""
-        return "Ring"
-
     async def async_press(self) -> None:
         """Make the watch ring."""
         _LOGGER.info("Making device %s ring", self._device_id)
@@ -85,6 +82,8 @@ class AnioRingButton(AnioEntity, ButtonEntity):
 
 class AnioPowerOffButton(AnioEntity, ButtonEntity):
     """Button entity for powering off ANIO watch."""
+
+    _attr_translation_key = "power_off"
 
     _attr_icon = "mdi:power"
     _attr_entity_category = EntityCategory.CONFIG
@@ -107,11 +106,6 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
         self._client = client
         self._attr_unique_id = f"{device_id}_power_off"
 
-    @property
-    def name(self) -> str:
-        """Return the name of the button."""
-        return "Power Off"
-
     async def async_press(self) -> None:
         """Handle the button press."""
         _LOGGER.warning(
@@ -126,6 +120,8 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
 
 class AnioFlowerButton(AnioEntity, ButtonEntity):
     """Button entity for sending a flower (praise) to the ANIO watch."""
+
+    _attr_translation_key = "flower"
 
     _attr_icon = "mdi:flower"
 
@@ -152,11 +148,6 @@ class AnioFlowerButton(AnioEntity, ButtonEntity):
         device_state = self.device_state
         if device_state and not device_state.device.config.has_hearts:
             self._attr_entity_registry_enabled_default = False
-
-    @property
-    def name(self) -> str:
-        """Return the name of the button."""
-        return "Flower"
 
     async def async_press(self) -> None:
         """Handle the button press."""
