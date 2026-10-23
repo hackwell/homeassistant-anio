@@ -54,7 +54,7 @@ def test_all_entities_have_translation_keys() -> None:
     """Test every platform defines translated entities."""
     platforms = {platform for platform, _ in _translation_keys()}
     assert platforms == set(PLATFORMS)
-    assert len(_translation_keys()) == 15
+    assert len(_translation_keys()) == 16
 
 
 @pytest.mark.parametrize("path", TRANSLATION_FILES, ids=lambda p: p.name)

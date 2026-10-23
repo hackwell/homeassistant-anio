@@ -236,6 +236,7 @@ class TestFewerApiCalls:
 
         mock_api_client.get_alarms.assert_awaited_once()
         mock_api_client.get_silence_times.assert_awaited_once()
+        mock_api_client.get_school_way_times.assert_awaited_once()
         mock_api_client.get_geofences.assert_awaited_once()
         # Fast data is fetched every time
         assert mock_api_client.get_activity.await_count == 2

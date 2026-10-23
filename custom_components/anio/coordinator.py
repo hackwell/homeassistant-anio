@@ -24,6 +24,7 @@ from .api import (
     ChatMessage,
     Geofence,
     LocationInfo,
+    SchoolWayTime,
     SilenceTime,
 )
 from .const import (
@@ -40,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 # Consider device offline if last seen more than 10 minutes ago
 ONLINE_THRESHOLD = timedelta(minutes=10)
 
-# Alarms, silence times and geofences rarely change, so they are fetched
+# Alarms, silence and school way times and geofences rarely change, so they are fetched
 # less often than location, messages and alerts
 SLOW_DATA_INTERVAL = timedelta(minutes=30)
 
@@ -51,6 +52,7 @@ class _SlowData:
 
     alarms: list[AlarmClock]
     silence_times: list[SilenceTime]
+    school_way_times: list[SchoolWayTime]
     geofences: list[Geofence]
     fetched_at: datetime
 
@@ -184,6 +186,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     last_message=last_message,
                     alarms=slow.alarms,
                     silence_times=slow.silence_times,
+                    school_way_times=slow.school_way_times,
                     tracking_mode=tracking_mode,
                 )
                 result[device.id] = state
@@ -209,7 +212,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             raise UpdateFailed(f"API error: {err}") from err
 
     async def _async_get_slow_data(self, device_id: str) -> _SlowData:
-        """Get alarms, silence times and geofences, cached for a while.
+        """Get alarms, silence and school way times and geofences, cached.
 
         Args:
             device_id: The device ID.
@@ -225,6 +228,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         slow = _SlowData(
             alarms=await self.client.get_alarms(device_id),
             silence_times=await self.client.get_silence_times(device_id),
+            school_way_times=await self.client.get_school_way_times(device_id),
             # Geofences belong to a device in the ANIO API
             geofences=await self.client.get_geofences(device_id),
             fetched_at=now,
@@ -233,7 +237,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         return slow
 
     def invalidate_slow_data(self, device_id: str) -> None:
-        """Fetch alarms, silence times and geofences again on the next update.
+        """Fetch the rarely changing data again on the next update.
 
         Args:
             device_id: The device whose settings were changed.
