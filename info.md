@@ -47,7 +47,7 @@ For each watch, the integration creates:
 | Location | Device Tracker | Watch location for map display |
 | Locate | Button | Ask the watch for a new location |
 | Power Off | Button | Remotely power off the watch |
-| Flower | Button | Send a "flower" (no visible effect on the ANIO 6) |
+| Flower | Button | Send a reward heart (only on watches with hearts, not the ANIO 6) |
 | Silence Time | Switch | Enable or disable the silence times |
 | Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |
