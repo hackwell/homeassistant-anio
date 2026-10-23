@@ -74,7 +74,7 @@
     },
     "button": {
       "locate": {
-        "name": "Orten"
+        "name": "Klingeln lassen"
       },
       "power_off": {
         "name": "Ausschalten"

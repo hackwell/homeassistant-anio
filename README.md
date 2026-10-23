@@ -14,7 +14,7 @@ A Home Assistant custom integration for ANIO children's smartwatches. Monitor yo
 - **Messaging** - Send text messages (up to 95 characters) and emoji messages to the watch
 - **Message Events** - Receive Home Assistant events when messages arrive from the watch, plus a sensor with the last message
 - **Watch Settings** - Ring profile, silence times on/off, tracking mode and next alarm
-- **Device Control** - Locate button to request a location update, Power Off button
+- **Device Control** - Ring button to find the watch, Power Off button
 
 ## Supported Devices
 
@@ -93,7 +93,7 @@ For each watch, the integration creates the following entities:
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `button.<name>_locate` | Button | Ask the watch for a new location; it arrives with one of the next updates |
+| `button.<name>_locate` | Button | **Ring**: the watch rings and vibrates loudly ("Uhr finden" in the ANIO app). It does **not** request a new location |
 | `button.<name>_power_off` | Button | Remotely power off the watch |
 | `button.<name>_flower` | Button | Send a "flower" (praise) to the watch. On the ANIO 6 this has no visible effect, see [#5](https://github.com/hackwell/homeassistant-anio/issues/5) |
 
@@ -279,15 +279,19 @@ automation:
 
 ### Location Not Updating
 
-- The watch only reports location periodically to save battery
-- Use the "Locate" button to request an immediate location update
+- The ANIO 6 reports its location every 60 minutes by default to save battery,
+  so the position in Home Assistant can be up to an hour old
+- For a fresh position, use "Einmalortung" (within about 60 seconds) or the
+  explorer mode (every 5 minutes for an hour) in the ANIO app; school way times
+  locate every minute. Opening the ANIO app also triggers a location update
+- The Ring button only makes the watch ring; it does not locate it
 - Check if "Locating" is enabled in the watch settings via the ANIO app
 
 ### Rate Limiting
 
 The ANIO API has rate limits. If you receive rate limit errors:
 - Increase the scan interval in the integration options
-- Avoid pressing the Locate button too frequently
+- Avoid pressing the Ring button too frequently
 
 ## Privacy & Security
 

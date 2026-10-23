@@ -10,7 +10,7 @@ This custom integration allows you to monitor and interact with ANIO smartwatche
 - **Messaging**: Send text and emoji messages to the watch
 - **Message Events**: Receive events when messages arrive from the watch, plus a sensor with the last message
 - **Watch Settings**: Ring profile, silence times on/off, tracking mode and next alarm
-- **Device Control**: Locate button and power off functionality
+- **Device Control**: Ring button to find the watch and power off functionality
 
 ## Supported Devices
 
@@ -45,7 +45,7 @@ For each watch, the integration creates:
 | Online | Binary Sensor | Whether watch is currently online |
 | At [Geofence] | Binary Sensor | One per geofence, shows presence |
 | Location | Device Tracker | Watch location for map display |
-| Locate | Button | Ask the watch for a new location |
+| Ring | Button | Make the watch ring and vibrate (does not locate it) |
 | Power Off | Button | Remotely power off the watch |
 | Flower | Button | Send a "flower" (no visible effect on the ANIO 6) |
 | Silence Time | Switch | Enable or disable the silence times |

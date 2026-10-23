@@ -74,7 +74,7 @@
     },
     "button": {
       "locate": {
-        "name": "Locate"
+        "name": "Ring"
       },
       "power_off": {
         "name": "Power Off"
