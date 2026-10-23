@@ -146,6 +146,13 @@ class AnioFlowerButton(AnioEntity, ButtonEntity):
         self._client = client
         self._attr_unique_id = f"{device_id}_flower"
 
+        # A flower adds a reward heart. Watches without hearts (e.g. the
+        # ANIO 6, hasHearts=false) accept it but show nothing, so the button
+        # starts disabled there.
+        device_state = self.device_state
+        if device_state and not device_state.device.config.has_hearts:
+            self._attr_entity_registry_enabled_default = False
+
     @property
     def name(self) -> str:
         """Return the name of the button."""

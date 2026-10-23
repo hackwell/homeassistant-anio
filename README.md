@@ -95,7 +95,7 @@ For each watch, the integration creates the following entities:
 |--------|------|-------------|
 | `button.<name>_locate` | Button | **Ring**: the watch rings and vibrates loudly ("Uhr finden" in the ANIO app). It does **not** request a new location |
 | `button.<name>_power_off` | Button | Remotely power off the watch |
-| `button.<name>_flower` | Button | Send a "flower" (praise) to the watch. On the ANIO 6 this has no visible effect, see [#5](https://github.com/hackwell/homeassistant-anio/issues/5) |
+| `button.<name>_flower` | Button | Send a "flower" (reward heart) to the watch. Only works on watches with reward hearts; the ANIO 6 has none, so there the button is disabled by default and has no effect ([#5](https://github.com/hackwell/homeassistant-anio/issues/5)) |
 
 ### Switch
 

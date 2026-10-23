@@ -288,6 +288,40 @@ class TestAnioFlowerButton:
         """Test entity category is None (user-facing action)."""
         assert flower_button.entity_category is None
 
+    def test_enabled_by_default_with_hearts(
+        self, flower_button: AnioFlowerButton
+    ) -> None:
+        """Test the button is enabled on watches with reward hearts."""
+        assert flower_button.entity_registry_enabled_default is True
+
+    def test_disabled_by_default_without_hearts(
+        self,
+        mock_coordinator_data: dict,
+        mock_api_client: AsyncMock,
+    ) -> None:
+        """Test the button starts disabled on watches without hearts (ANIO 6)."""
+        mock_coordinator_data[TEST_DEVICE_ID].device.config.has_hearts = False
+        coordinator = MagicMock()
+        coordinator.data = mock_coordinator_data
+
+        button = AnioFlowerButton(
+            coordinator=coordinator,
+            client=mock_api_client,
+            device_id=TEST_DEVICE_ID,
+        )
+
+        assert button.entity_registry_enabled_default is False
+
+    def test_has_hearts_from_api(self) -> None:
+        """Test hasHearts is read from the device config."""
+        from custom_components.anio.api.models import DeviceConfig
+
+        config = DeviceConfig.model_validate(
+            {"generation": "6", "firmwareVersion": "X", "hasHearts": False}
+        )
+
+        assert config.has_hearts is False
+
     @pytest.mark.asyncio
     async def test_async_press(
         self,

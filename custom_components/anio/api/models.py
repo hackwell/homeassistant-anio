@@ -36,6 +36,8 @@ class DeviceConfig(BaseModel):
     has_emojis: bool = Field(default=True, alias="hasEmojis")
     has_step_counter: bool = Field(default=True, alias="hasStepCounter")
     has_locating_switch: bool = Field(default=True, alias="hasLocatingSwitch")
+    # Reward hearts, which the flower button adds (false on the ANIO 6)
+    has_hearts: bool = Field(default=True, alias="hasHearts")
 
 
 class DeviceSettings(BaseModel):
