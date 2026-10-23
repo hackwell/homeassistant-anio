@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import math
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import (
     ActivityItem,
+    AlarmClock,
     AnioApiClient,
     AnioApiError,
     AnioAuthError,
@@ -22,6 +24,7 @@ from .api import (
     ChatMessage,
     Geofence,
     LocationInfo,
+    SilenceTime,
 )
 from .const import (
     DEFAULT_SCAN_INTERVAL,
@@ -36,6 +39,20 @@ _LOGGER = logging.getLogger(__name__)
 
 # Consider device offline if last seen more than 10 minutes ago
 ONLINE_THRESHOLD = timedelta(minutes=10)
+
+# Alarms, silence times and geofences rarely change, so they are fetched
+# less often than location, messages and alerts
+SLOW_DATA_INTERVAL = timedelta(minutes=30)
+
+
+@dataclass
+class _SlowData:
+    """Rarely changing data of one device."""
+
+    alarms: list[AlarmClock]
+    silence_times: list[SilenceTime]
+    geofences: list[Geofence]
+    fetched_at: datetime
 
 
 class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]]):
@@ -75,6 +92,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         # Same for ANIO's alerts (activity feed)
         self._seen_activity_ids: dict[str, None] = {}
         self._primed_activity_devices: set[str] = set()
+        self._slow_data: dict[str, _SlowData] = {}
 
     @property
     def geofences(self) -> list[Geofence]:
@@ -145,13 +163,12 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     sorted(activity, key=lambda item: item.created_at),
                 )
 
-                # Fetch alarms, silence times, and tracking mode
-                alarms = await self.client.get_alarms(device.id)
-                silence_times = await self.client.get_silence_times(device.id)
-                tracking_mode = await self.client.get_tracking_mode(device.id)
+                slow = await self._async_get_slow_data(device.id)
 
-                # Geofences belong to a device in the ANIO API
-                geofences = await self.client.get_geofences(device.id)
+                # The location already contains the tracking mode
+                tracking_mode = latest.tracking_mode if latest else None
+                if tracking_mode is None:
+                    tracking_mode = await self.client.get_tracking_mode(device.id)
 
                 is_online = self._calculate_online_status(last_seen)
 
@@ -159,17 +176,21 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     device=device,
                     location=location,
                     # Inside/outside is computed on demand by is_device_in_geofence
-                    geofences=geofences,
+                    geofences=slow.geofences,
                     last_seen=last_seen,
                     is_online=is_online,
                     battery_level_value=battery_level,
                     signal_strength=signal_strength,
                     last_message=last_message,
-                    alarms=alarms,
-                    silence_times=silence_times,
+                    alarms=slow.alarms,
+                    silence_times=slow.silence_times,
                     tracking_mode=tracking_mode,
                 )
                 result[device.id] = state
+
+            # Forget removed devices
+            for device_id in self._slow_data.keys() - result.keys():
+                del self._slow_data[device_id]
 
             _LOGGER.debug(
                 "Updated %d devices, %d geofences",
@@ -186,6 +207,38 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             raise UpdateFailed(f"Connection error: {err}") from err
         except AnioApiError as err:
             raise UpdateFailed(f"API error: {err}") from err
+
+    async def _async_get_slow_data(self, device_id: str) -> _SlowData:
+        """Get alarms, silence times and geofences, cached for a while.
+
+        Args:
+            device_id: The device ID.
+
+        Returns:
+            The cached or freshly fetched data.
+        """
+        now = datetime.now(UTC)
+        cached = self._slow_data.get(device_id)
+        if cached and now - cached.fetched_at < SLOW_DATA_INTERVAL:
+            return cached
+
+        slow = _SlowData(
+            alarms=await self.client.get_alarms(device_id),
+            silence_times=await self.client.get_silence_times(device_id),
+            # Geofences belong to a device in the ANIO API
+            geofences=await self.client.get_geofences(device_id),
+            fetched_at=now,
+        )
+        self._slow_data[device_id] = slow
+        return slow
+
+    def invalidate_slow_data(self, device_id: str) -> None:
+        """Fetch alarms, silence times and geofences again on the next update.
+
+        Args:
+            device_id: The device whose settings were changed.
+        """
+        self._slow_data.pop(device_id, None)
 
     def _calculate_online_status(self, last_seen: datetime | None) -> bool:
         """Calculate if a device is online based on last seen time.

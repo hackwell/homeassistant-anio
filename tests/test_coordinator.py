@@ -14,8 +14,13 @@ from custom_components.anio.api import (
     AnioAuthError,
     AnioConnectionError,
     AnioRateLimitError,
+    DeviceLocation,
 )
-from custom_components.anio.coordinator import AnioDataUpdateCoordinator
+from custom_components.anio.coordinator import (
+    SLOW_DATA_INTERVAL,
+    AnioDataUpdateCoordinator,
+)
+from custom_components.anio.switch import AnioSilenceTimeSwitch
 
 from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
 
@@ -189,3 +194,123 @@ class TestAnioDataUpdateCoordinator:
         ) as mock_refresh:
             await coordinator.async_request_refresh_for_device(TEST_DEVICE_ID)
             mock_refresh.assert_called_once()
+
+
+class TestFewerApiCalls:
+    """Rarely changing data is not fetched at every poll."""
+
+    @pytest.fixture
+    def coordinator(
+        self, hass: HomeAssistant, mock_api_client: AsyncMock
+    ) -> AnioDataUpdateCoordinator:
+        """Create a coordinator for testing."""
+        return AnioDataUpdateCoordinator(
+            hass=hass,
+            client=mock_api_client,
+            scan_interval=300,
+        )
+
+    @staticmethod
+    def _location(tracking_mode: str | None) -> DeviceLocation:
+        """Create a location response with an optional tracking mode."""
+        data = {
+            "position": [52.52, 13.405],
+            "batteryLevel": 51,
+            "signalStrength": 60,
+            "positionDeterminedBy": "WIFI",
+            "date": "2026-10-23T10:00:00Z",
+            "lastResponse": "2026-10-23T10:00:00Z",
+            "deviceId": TEST_DEVICE_ID,
+        }
+        if tracking_mode is not None:
+            data["trackingMode"] = tracking_mode
+        return DeviceLocation.model_validate(data)
+
+    @pytest.mark.asyncio
+    async def test_slow_data_is_cached(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test alarms, silence times and geofences are fetched once."""
+        await coordinator._async_update_data()
+        data = await coordinator._async_update_data()
+
+        mock_api_client.get_alarms.assert_awaited_once()
+        mock_api_client.get_silence_times.assert_awaited_once()
+        mock_api_client.get_geofences.assert_awaited_once()
+        # Fast data is fetched every time
+        assert mock_api_client.get_activity.await_count == 2
+        assert mock_api_client.get_chat_history.await_count == 2
+        assert len(data[TEST_DEVICE_ID].geofences) == 1
+
+    @pytest.mark.asyncio
+    async def test_slow_data_expires(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test the cache is refreshed after 30 minutes."""
+        await coordinator._async_update_data()
+        coordinator._slow_data[TEST_DEVICE_ID].fetched_at -= SLOW_DATA_INTERVAL
+        await coordinator._async_update_data()
+
+        assert mock_api_client.get_geofences.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_invalidate_refetches(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test a settings change fetches the slow data again."""
+        await coordinator._async_update_data()
+        coordinator.invalidate_slow_data(TEST_DEVICE_ID)
+        await coordinator._async_update_data()
+
+        assert mock_api_client.get_silence_times.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_removed_device_is_forgotten(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test the cache of a removed device is dropped."""
+        await coordinator._async_update_data()
+        mock_api_client.get_devices.return_value = []
+        await coordinator._async_update_data()
+
+        assert coordinator._slow_data == {}
+
+    @pytest.mark.asyncio
+    async def test_tracking_mode_from_location(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test the tracking mode comes from the location response."""
+        mock_api_client.get_last_location.return_value = self._location("NORMAL")
+
+        data = await coordinator._async_update_data()
+
+        assert data[TEST_DEVICE_ID].tracking_mode == "NORMAL"
+        mock_api_client.get_tracking_mode.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_tracking_mode_fallback(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test the tracking mode endpoint is used if the location lacks it."""
+        mock_api_client.get_last_location.return_value = self._location(None)
+        mock_api_client.get_tracking_mode.return_value = "POWER_SAVING"
+
+        data = await coordinator._async_update_data()
+
+        assert data[TEST_DEVICE_ID].tracking_mode == "POWER_SAVING"
+        mock_api_client.get_tracking_mode.assert_awaited_once_with(TEST_DEVICE_ID)
+
+
+@pytest.mark.asyncio
+async def test_silence_switch_refetches_settings(
+    mock_api_client: AsyncMock,
+) -> None:
+    """Test switching silence times drops the cached settings."""
+    coordinator = MagicMock()
+    coordinator.async_request_refresh = AsyncMock()
+    switch = AnioSilenceTimeSwitch(coordinator, mock_api_client, TEST_DEVICE_ID)
+
+    await switch.async_turn_off()
+
+    coordinator.invalidate_slow_data.assert_called_once_with(TEST_DEVICE_ID)
+    coordinator.async_request_refresh.assert_awaited_once()
