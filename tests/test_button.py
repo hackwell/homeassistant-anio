@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.button import ButtonDeviceClass
@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.anio.api import AnioApiError
 from custom_components.anio.button import (
+    LOCATE_REFRESH_DELAY,
     AnioFlowerButton,
     AnioLocateButton,
     AnioPowerOffButton,
@@ -69,11 +70,45 @@ class TestAnioLocateButton:
         locate_button: AnioLocateButton,
         mock_api_client: AsyncMock,
     ) -> None:
-        """Test pressing the locate button."""
-        await locate_button.async_press()
+        """Test pressing locate refreshes once the watch had time to report."""
+        with patch("custom_components.anio.button.async_call_later") as call_later:
+            await locate_button.async_press()
 
         mock_api_client.find_device.assert_called_once_with(TEST_DEVICE_ID)
-        locate_button.coordinator.async_request_refresh.assert_called_once()
+        # No immediate refresh: it would only fetch the old location
+        locate_button.coordinator.async_request_refresh.assert_not_called()
+
+        _hass, delay, refresh = call_later.call_args.args
+        assert delay == LOCATE_REFRESH_DELAY
+        await refresh(None)
+        locate_button.coordinator.async_request_refresh.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_async_press_twice_replaces_pending_refresh(
+        self,
+        locate_button: AnioLocateButton,
+    ) -> None:
+        """Test a second press cancels the first scheduled refresh."""
+        with patch("custom_components.anio.button.async_call_later") as call_later:
+            await locate_button.async_press()
+            first_cancel = call_later.return_value
+            await locate_button.async_press()
+
+        first_cancel.assert_called_once()
+        assert call_later.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_pending_refresh_cancelled_on_remove(
+        self,
+        locate_button: AnioLocateButton,
+    ) -> None:
+        """Test removing the entity cancels a scheduled refresh."""
+        with patch("custom_components.anio.button.async_call_later") as call_later:
+            await locate_button.async_press()
+
+        await locate_button.async_will_remove_from_hass()
+
+        call_later.return_value.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_async_press_api_error(

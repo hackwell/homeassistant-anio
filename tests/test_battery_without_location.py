@@ -67,3 +67,26 @@ class TestBatteryWithoutLocation:
 
         assert data[TEST_DEVICE_ID].battery_level == 42
         assert data[TEST_DEVICE_ID].signal_strength == 70
+
+    @pytest.mark.asyncio
+    async def test_location_source_from_last_location(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test the way the position was determined is kept."""
+        from custom_components.anio.api.models import DeviceLocation
+
+        mock_api_client.get_last_location.return_value = DeviceLocation(
+            position=[52.52, 13.405],
+            batteryLevel=42,
+            signalStrength=70,
+            positionDeterminedBy="WIFI",
+            date=datetime.now(timezone.utc),
+            lastResponse=datetime.now(timezone.utc),
+            deviceId=TEST_DEVICE_ID,
+        )
+
+        data = await coordinator._async_update_data()
+
+        assert data[TEST_DEVICE_ID].location is not None
+        assert data[TEST_DEVICE_ID].location.source == "WIFI"
+

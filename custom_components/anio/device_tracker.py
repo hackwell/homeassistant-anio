@@ -94,5 +94,6 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
                 "last_update": device_state.location.timestamp.isoformat()
                 if device_state.location.timestamp
                 else None,
+                "location_source": device_state.location.source,
             }
         return None

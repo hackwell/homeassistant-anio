@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from datetime import datetime
 
 from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 
 from .api import AnioApiClient
 from .const import DOMAIN
@@ -16,6 +19,10 @@ from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+# The watch needs some time to determine and upload a new position after a
+# locate request, so refreshing right away would only fetch the old one.
+LOCATE_REFRESH_DELAY = 60
 
 
 async def async_setup_entry(
@@ -65,6 +72,7 @@ class AnioLocateButton(AnioEntity, ButtonEntity):
         super().__init__(coordinator, device_id)
         self._client = client
         self._attr_unique_id = f"{device_id}_locate"
+        self._cancel_refresh: Callable[[], None] | None = None
 
     @property
     def name(self) -> str:
@@ -77,10 +85,26 @@ class AnioLocateButton(AnioEntity, ButtonEntity):
 
         await self._client.find_device(self._device_id)
 
-        # Request a coordinator refresh to get the new location
-        await self.coordinator.async_request_refresh()
+        # Fetch the new location once the watch had time to report it
+        if self._cancel_refresh:
+            self._cancel_refresh()
+        self._cancel_refresh = async_call_later(
+            self.hass, LOCATE_REFRESH_DELAY, self._async_refresh_after_locate
+        )
 
         _LOGGER.debug("Location request sent for device %s", self._device_id)
+
+    async def _async_refresh_after_locate(self, _now: datetime) -> None:
+        """Refresh the coordinator after a locate request."""
+        self._cancel_refresh = None
+        await self.coordinator.async_request_refresh()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel a pending refresh when the entity is removed."""
+        if self._cancel_refresh:
+            self._cancel_refresh()
+            self._cancel_refresh = None
+        await super().async_will_remove_from_hass()
 
 
 class AnioPowerOffButton(AnioEntity, ButtonEntity):

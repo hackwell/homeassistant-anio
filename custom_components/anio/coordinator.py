@@ -119,6 +119,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                         lng=latest.longitude,
                         accuracy=0,
                         timestamp=latest.date,
+                        source=latest.position_determined_by,
                     )
                     last_seen = latest.last_response
                     battery_level = latest.battery_level
