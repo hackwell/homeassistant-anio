@@ -61,6 +61,11 @@ After setup, you can configure the following options:
 |--------|---------|-------------|
 | Scan Interval | 300s | How often to poll the ANIO API (60-300 seconds) |
 
+Location, battery, messages and ANIO's alerts are fetched at every scan. Alarms,
+silence times and geofences rarely change, so they are only fetched every 30
+minutes (silence times right away after switching them in Home Assistant). A
+geofence added in the ANIO app can therefore take up to 30 minutes to appear.
+
 ## Entities
 
 For each watch, the integration creates the following entities. Their names are

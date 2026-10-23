@@ -162,6 +162,8 @@ class DeviceLocation(BaseModel):
     speed: int = 0
     direction: int = 0
     device_id: str = Field(alias="deviceId")
+    # The location reports the current tracking mode (e.g. NORMAL)
+    tracking_mode: str | None = Field(default=None, alias="trackingMode")
 
     @property
     def latitude(self) -> float:

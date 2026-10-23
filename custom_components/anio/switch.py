@@ -69,12 +69,14 @@ class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
         """Enable silence times."""
         with translate_api_errors():
             await self._client.enable_silence_times(self._device_id)
+        self.coordinator.invalidate_slow_data(self._device_id)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Disable silence times."""
         with translate_api_errors():
             await self._client.disable_silence_times(self._device_id)
+        self.coordinator.invalidate_slow_data(self._device_id)
         await self.coordinator.async_request_refresh()
 
     @property
