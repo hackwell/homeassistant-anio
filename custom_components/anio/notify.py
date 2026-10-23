@@ -113,7 +113,7 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         Args:
             message: The message content (text or emoji code).
             message_type: "text" (default) or "emoji".
-            username: Custom sender name for text messages.
+            username: Sender name shown on the watch (default "Home Assistant").
         """
         if not message or not message.strip():
             _LOGGER.debug("Skipping empty message")
@@ -132,6 +132,7 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
             await self._client.send_emoji_message(
                 self._device_id,
                 message,
+                username=username,
             )
         else:
             await self._client.send_text_message(

@@ -8,7 +8,7 @@ send_message:
   fields:
     message:
       name: Message
-      description: The message text to send (max 95 characters) or emoji code (E01-E12).
+      description: The message text to send (max 95 characters) or emoji code (E01-E09, see README).
       required: true
       example: "Hello from Home Assistant!"
       selector:
@@ -27,7 +27,7 @@ send_message:
               value: emoji
     username:
       name: Sender Name
-      description: Custom name shown as the message sender on the watch (only for text messages).
+      description: Name shown as the message sender on the watch. Defaults to "Home Assistant"; the watch needs a sender name to display the message.
       required: false
       example: "Mom"
       selector:

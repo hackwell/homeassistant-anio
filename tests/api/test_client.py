@@ -191,6 +191,9 @@ class TestAnioApiClient:
         assert isinstance(message, ChatMessage)
         assert message.text == "Hello!"
         assert message.type == "TEXT"
+        # The watch needs a sender name, otherwise it shows a digit code
+        payload = mock_session.request.call_args.kwargs["json"]
+        assert payload["username"] == "Home Assistant"
 
     @pytest.mark.asyncio
     async def test_send_text_message_too_long(
@@ -255,6 +258,44 @@ class TestAnioApiClient:
 
         assert isinstance(message, ChatMessage)
         assert message.type == "EMOJI"
+        payload = mock_session.request.call_args.kwargs["json"]
+        assert payload == {
+            "deviceId": "device123",
+            "text": "E01",
+            "username": "Home Assistant",
+        }
+
+    @pytest.mark.asyncio
+    async def test_send_emoji_message_with_username(
+        self, client: AnioApiClient, mock_session: MagicMock
+    ) -> None:
+        """Test the sender name is also sent for emojis."""
+        mock_session.request.return_value = self._create_mock_response(
+            status=201,
+            json_data={
+                "id": "msg123",
+                "deviceId": "device123",
+                "text": "E09",
+                "type": "EMOJI",
+                "sender": "APP",
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+
+        await client.send_emoji_message("device123", "E09", username="Papa")
+
+        assert mock_session.request.call_args.kwargs["json"]["username"] == "Papa"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("code", ["E00", "E10", "E12", "E99"])
+    async def test_send_emoji_message_unknown_codes(
+        self, client: AnioApiClient, mock_session: MagicMock, code: str
+    ) -> None:
+        """Test only the app's nine emoji codes E01-E09 are accepted."""
+        with pytest.raises(AnioApiError, match="Invalid emoji code"):
+            await client.send_emoji_message("device123", code)
+
+        mock_session.request.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_send_emoji_message_invalid_code(
