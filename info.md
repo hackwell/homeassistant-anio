@@ -4,12 +4,12 @@ This custom integration allows you to monitor and interact with ANIO smartwatche
 
 ## Features
 
-- **Status Monitoring**: Battery level, online status, last seen timestamp
-- **Step Counter**: Daily step count with progress towards goal
-- **Location Tracking**: Real-time GPS location on the Home Assistant map
-- **Geofence Sensors**: Know when the watch enters or leaves defined zones
+- **Status Monitoring**: Battery level, signal strength, online status, last seen timestamp
+- **Location Tracking**: Watch location on the Home Assistant map
+- **Geofence Sensors**: Know whether the watch is inside the geofences defined in the ANIO app
 - **Messaging**: Send text and emoji messages to the watch
-- **Message Events**: Receive events when messages arrive from the watch
+- **Message Events**: Receive events when messages arrive from the watch, plus a sensor with the last message
+- **Watch Settings**: Ring profile, silence times on/off, tracking mode and next alarm
 - **Device Control**: Locate button and power off functionality
 
 ## Supported Devices
@@ -19,7 +19,7 @@ This custom integration allows you to monitor and interact with ANIO smartwatche
 
 ## Requirements
 
-- Home Assistant 2024.1.0 or newer
+- Home Assistant 2024.12.0 or newer
 - ANIO account (same credentials as the ANIO app)
 
 ## Installation
@@ -37,13 +37,19 @@ For each watch, the integration creates:
 | Entity | Type | Description |
 |--------|------|-------------|
 | Battery | Sensor | Battery percentage |
-| Steps | Sensor | Daily step count |
+| Signal Strength | Sensor | Mobile signal strength |
 | Last Seen | Sensor | Timestamp of last communication |
+| Last Message | Sensor | Last message sent by the watch |
+| Next Alarm | Sensor | Earliest enabled alarm time |
+| Tracking Mode | Sensor | Current tracking mode |
 | Online | Binary Sensor | Whether watch is currently online |
-| Location | Device Tracker | GPS coordinates for map display |
 | At [Geofence] | Binary Sensor | One per geofence, shows presence |
-| Locate | Button | Request immediate location update |
+| Location | Device Tracker | Watch location for map display |
+| Locate | Button | Ask the watch for a new location |
 | Power Off | Button | Remotely power off the watch |
+| Flower | Button | Send a "flower" (no visible effect on the ANIO 6) |
+| Silence Time | Switch | Enable or disable the silence times |
+| Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |
 
 ## Events

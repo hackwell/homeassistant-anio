@@ -8,13 +8,13 @@ A Home Assistant custom integration for ANIO children's smartwatches. Monitor yo
 
 ## Features
 
-- **Status Monitoring** - Battery level, online status, last seen timestamp
-- **Step Counter** - Daily step count with progress towards daily goal
-- **Location Tracking** - Real-time GPS location displayed on the Home Assistant map
-- **Geofence Sensors** - Binary sensors showing when the watch enters/leaves defined zones
+- **Status Monitoring** - Battery level, signal strength, online status, last seen timestamp
+- **Location Tracking** - Watch location displayed on the Home Assistant map
+- **Geofence Sensors** - Binary sensors showing whether the watch is inside the geofences defined in the ANIO app
 - **Messaging** - Send text messages (up to 95 characters) and emoji messages to the watch
-- **Message Events** - Receive Home Assistant events when messages arrive from the watch
-- **Device Control** - Locate button to request immediate location update, Power Off button
+- **Message Events** - Receive Home Assistant events when messages arrive from the watch, plus a sensor with the last message
+- **Watch Settings** - Ring profile, silence times on/off, tracking mode and next alarm
+- **Device Control** - Locate button to request a location update, Power Off button
 
 ## Supported Devices
 
@@ -23,7 +23,7 @@ A Home Assistant custom integration for ANIO children's smartwatches. Monitor yo
 
 ## Requirements
 
-- Home Assistant 2024.1.0 or newer
+- Home Assistant 2024.12.0 or newer
 - ANIO account (same credentials used in the ANIO mobile app)
 - HACS (Home Assistant Community Store) for easy installation
 
@@ -69,9 +69,12 @@ For each watch, the integration creates the following entities:
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `sensor.<name>_battery` | Sensor | Battery percentage (0-100%) |
-| `sensor.<name>_steps` | Sensor | Daily step count |
+| `sensor.<name>_battery` | Sensor | Battery percentage (0-100%), unknown while no location is available |
+| `sensor.<name>_signal_strength` | Sensor | Mobile signal strength (%) |
 | `sensor.<name>_last_seen` | Sensor | Timestamp of last communication |
+| `sensor.<name>_last_message` | Sensor | Text of the last message sent by the watch (attributes: sender, type, created_at, is_read) |
+| `sensor.<name>_next_alarm` | Sensor | Earliest enabled alarm time (does not take weekdays into account yet) |
+| `sensor.<name>_tracking_mode` | Sensor | Current tracking mode reported by the watch |
 
 ### Binary Sensors
 
@@ -90,14 +93,27 @@ For each watch, the integration creates the following entities:
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `button.<name>_locate` | Button | Request immediate location update |
+| `button.<name>_locate` | Button | Ask the watch for a new location; it arrives with one of the next updates |
 | `button.<name>_power_off` | Button | Remotely power off the watch |
+| `button.<name>_flower` | Button | Send a "flower" (praise) to the watch. On the ANIO 6 this has no visible effect, see [#5](https://github.com/hackwell/homeassistant-anio/issues/5) |
+
+### Switch
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| `switch.<name>_silence_time` | Switch | Enable or disable all silence times configured in the ANIO app |
+
+### Select
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| `select.<name>_ring_profile` | Select | Ring profile: `RING_AND_VIBRATE`, `VIBRATE_ONLY` or `SILENT` |
 
 ### Notify
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `notify.<name>_message` | Notify | Send messages to the watch |
+| `notify.<name>_message` | Notify | Send messages to the watch, see [Send Message](#send-message) |
 
 ## Services
 
@@ -278,6 +294,7 @@ The ANIO API has rate limits. If you receive rate limit errors:
 - All communication uses HTTPS encryption
 - Credentials are stored securely in Home Assistant
 - No data is sent to third parties
+- Message texts and locations are not written to the Home Assistant log
 - The integration only accesses data for watches linked to your account
 
 ## Contributing
