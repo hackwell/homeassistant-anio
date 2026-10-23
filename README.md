@@ -298,6 +298,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 This is an unofficial integration and is not affiliated with, endorsed by, or connected to ANIO in any way. Use at your own risk.
 
+This integration is not meant for safety-critical use. Location, online status and geofence updates depend on the ANIO cloud and are only polled every few minutes, so they can be late or missing. In an emergency, don't rely on Home Assistant notifications alone; use the ANIO app and the watch's own SOS and call functions.
+
 ## Support
 
 - [GitHub Issues](https://github.com/hackwell/homeassistant-anio/issues) - Bug reports and feature requests

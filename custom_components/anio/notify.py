@@ -122,10 +122,10 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         message_type = message_type.lower()
 
         _LOGGER.debug(
-            "Sending %s message to device %s: %s",
+            "Sending %s message (%d characters) to device %s",
             message_type,
+            len(message),
             self._device_id,
-            message[:20] + "..." if len(message) > 20 else message,
         )
 
         if message_type == "emoji":
