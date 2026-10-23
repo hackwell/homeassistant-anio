@@ -278,6 +278,64 @@ class TestConfigFlow:
         assert existing_entry.data["access_token"] == TEST_ACCESS_TOKEN
         assert existing_entry.data["refresh_token"] == TEST_REFRESH_TOKEN
 
+    @pytest.mark.asyncio
+    async def test_reauth_flow_with_2fa(
+        self,
+        hass: HomeAssistant,
+        mock_auth_success: AsyncMock,
+        mock_setup_entry: AsyncMock,
+    ) -> None:
+        """Test reauth that asks for a 2FA code updates the existing entry."""
+        existing_entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=TEST_EMAIL.lower(),
+            data={CONF_EMAIL: TEST_EMAIL},
+        )
+        existing_entry.add_to_hass(hass)
+
+        mock_auth_success.login = AsyncMock(
+            side_effect=[
+                AnioOtpRequiredError(),
+                AuthTokens(
+                    accessToken=TEST_ACCESS_TOKEN,
+                    refreshToken=TEST_REFRESH_TOKEN,
+                    isOtpCodeRequired=False,
+                ),
+            ]
+        )
+
+        with patch(
+            "custom_components.anio.config_flow.AnioAuth",
+            return_value=mock_auth_success,
+        ):
+            result = await hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={
+                    "source": config_entries.SOURCE_REAUTH,
+                    "entry_id": existing_entry.entry_id,
+                },
+                data=existing_entry.data,
+            )
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {CONF_PASSWORD: TEST_PASSWORD},
+            )
+
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "2fa"
+
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {"otp_code": "123456"},
+            )
+
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "reauth_successful"
+        assert existing_entry.data["access_token"] == TEST_ACCESS_TOKEN
+        assert existing_entry.data["refresh_token"] == TEST_REFRESH_TOKEN
+        # No second entry for the same account
+        assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
 
 class TestOptionsFlow:
     """Tests for options flow."""

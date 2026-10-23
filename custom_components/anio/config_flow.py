@@ -6,7 +6,12 @@ import logging
 from typing import Any
 
 import aiohttp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -134,6 +139,8 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
 
             try:
                 await self._auth.login(otp_code=otp_code)
+                if self.source == SOURCE_REAUTH:
+                    return await self._async_finish_reauth()
                 return self._create_entry()
 
             except AnioAuthError as err:
@@ -173,6 +180,36 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_APP_UUID: self._auth.app_uuid,
             },
         )
+
+    async def _async_finish_reauth(self) -> ConfigFlowResult:
+        """Store the new tokens in the existing entry and reload it.
+
+        Used after a successful re-authentication, with or without 2FA.
+
+        Returns:
+            Config flow result.
+        """
+        if not self._auth:
+            return self.async_abort(reason="auth_error")
+
+        existing_entry = await self.async_set_unique_id(
+            self._email.lower() if self._email else ""
+        )
+
+        if existing_entry:
+            self.hass.config_entries.async_update_entry(
+                existing_entry,
+                data={
+                    CONF_EMAIL: self._email,
+                    CONF_ACCESS_TOKEN: self._auth.access_token,
+                    CONF_REFRESH_TOKEN: self._auth.refresh_token,
+                    CONF_APP_UUID: self._auth.app_uuid,
+                },
+            )
+            await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
+
+        return self._create_entry()
 
     async def async_step_reauth(
         self,
@@ -219,25 +256,7 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
                 if tokens.is_otp_required:
                     return await self.async_step_2fa()
 
-                # Update the existing entry
-                existing_entry = await self.async_set_unique_id(
-                    self._email.lower() if self._email else ""
-                )
-
-                if existing_entry:
-                    self.hass.config_entries.async_update_entry(
-                        existing_entry,
-                        data={
-                            CONF_EMAIL: self._email,
-                            CONF_ACCESS_TOKEN: self._auth.access_token,
-                            CONF_REFRESH_TOKEN: self._auth.refresh_token,
-                            CONF_APP_UUID: self._auth.app_uuid,
-                        },
-                    )
-                    await self.hass.config_entries.async_reload(existing_entry.entry_id)
-                    return self.async_abort(reason="reauth_successful")
-
-                return self._create_entry()
+                return await self._async_finish_reauth()
 
             except AnioOtpRequiredError:
                 return await self.async_step_2fa()
