@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.components.button import ButtonDeviceClass
@@ -11,10 +11,9 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.anio.api import AnioApiError
 from custom_components.anio.button import (
-    LOCATE_REFRESH_DELAY,
     AnioFlowerButton,
-    AnioLocateButton,
     AnioPowerOffButton,
+    AnioRingButton,
     async_setup_entry,
 )
 from custom_components.anio.const import DOMAIN
@@ -28,99 +27,65 @@ def hass(mock_hass: HomeAssistant) -> HomeAssistant:
     return mock_hass
 
 
-class TestAnioLocateButton:
-    """Tests for AnioLocateButton."""
+class TestAnioRingButton:
+    """Tests for AnioRingButton (formerly "Locate")."""
 
     @pytest.fixture
-    def locate_button(
+    def ring_button(
         self,
         hass: HomeAssistant,
         mock_coordinator_data: dict,
         mock_api_client: AsyncMock,
-    ) -> AnioLocateButton:
-        """Create a locate button for testing."""
+    ) -> AnioRingButton:
+        """Create a ring button for testing."""
         coordinator = MagicMock()
         coordinator.data = mock_coordinator_data
         coordinator.async_request_refresh = AsyncMock()
-        return AnioLocateButton(
+        return AnioRingButton(
             coordinator=coordinator,
             client=mock_api_client,
             device_id=TEST_DEVICE_ID,
         )
 
-    def test_unique_id(self, locate_button: AnioLocateButton) -> None:
-        """Test unique ID format."""
-        assert locate_button.unique_id == f"{TEST_DEVICE_ID}_locate"
+    def test_unique_id_unchanged(self, ring_button: AnioRingButton) -> None:
+        """Test the unique ID of the former Locate button is kept."""
+        assert ring_button.unique_id == f"{TEST_DEVICE_ID}_locate"
 
-    def test_name(self, locate_button: AnioLocateButton) -> None:
+    def test_name(self, ring_button: AnioRingButton) -> None:
         """Test button name."""
-        assert locate_button.name == "Locate"
+        assert ring_button.name == "Ring"
 
-    def test_icon(self, locate_button: AnioLocateButton) -> None:
+    def test_icon(self, ring_button: AnioRingButton) -> None:
         """Test button icon."""
-        assert locate_button.icon == "mdi:crosshairs-gps"
+        assert ring_button.icon == "mdi:bell-ring"
 
-    def test_entity_category(self, locate_button: AnioLocateButton) -> None:
+    def test_entity_category(self, ring_button: AnioRingButton) -> None:
         """Test entity category."""
-        assert locate_button.entity_category == EntityCategory.DIAGNOSTIC
+        assert ring_button.entity_category == EntityCategory.DIAGNOSTIC
 
     @pytest.mark.asyncio
-    async def test_async_press(
+    async def test_async_press_rings_without_refresh(
         self,
-        locate_button: AnioLocateButton,
+        ring_button: AnioRingButton,
         mock_api_client: AsyncMock,
     ) -> None:
-        """Test pressing locate refreshes once the watch had time to report."""
-        with patch("custom_components.anio.button.async_call_later") as call_later:
-            await locate_button.async_press()
+        """Test pressing rings the watch and doesn't trigger a useless refresh."""
+        await ring_button.async_press()
 
         mock_api_client.find_device.assert_called_once_with(TEST_DEVICE_ID)
-        # No immediate refresh: it would only fetch the old location
-        locate_button.coordinator.async_request_refresh.assert_not_called()
-
-        _hass, delay, refresh = call_later.call_args.args
-        assert delay == LOCATE_REFRESH_DELAY
-        await refresh(None)
-        locate_button.coordinator.async_request_refresh.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_async_press_twice_replaces_pending_refresh(
-        self,
-        locate_button: AnioLocateButton,
-    ) -> None:
-        """Test a second press cancels the first scheduled refresh."""
-        with patch("custom_components.anio.button.async_call_later") as call_later:
-            await locate_button.async_press()
-            first_cancel = call_later.return_value
-            await locate_button.async_press()
-
-        first_cancel.assert_called_once()
-        assert call_later.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_pending_refresh_cancelled_on_remove(
-        self,
-        locate_button: AnioLocateButton,
-    ) -> None:
-        """Test removing the entity cancels a scheduled refresh."""
-        with patch("custom_components.anio.button.async_call_later") as call_later:
-            await locate_button.async_press()
-
-        await locate_button.async_will_remove_from_hass()
-
-        call_later.return_value.assert_called_once()
+        ring_button.coordinator.async_request_refresh.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_async_press_api_error(
         self,
-        locate_button: AnioLocateButton,
+        ring_button: AnioRingButton,
         mock_api_client: AsyncMock,
     ) -> None:
-        """Test API error when pressing locate button."""
+        """Test API error when pressing the ring button."""
         mock_api_client.find_device.side_effect = AnioApiError("API Error")
 
         with pytest.raises(AnioApiError):
-            await locate_button.async_press()
+            await ring_button.async_press()
 
 
 class TestAnioPowerOffButton:
@@ -218,7 +183,7 @@ class TestButtonSetup:
 
         # Should create locate, power_off, and flower buttons per device
         assert len(entities) == 3
-        assert any(isinstance(e, AnioLocateButton) for e in entities)
+        assert any(isinstance(e, AnioRingButton) for e in entities)
         assert any(isinstance(e, AnioPowerOffButton) for e in entities)
         assert any(isinstance(e, AnioFlowerButton) for e in entities)
 

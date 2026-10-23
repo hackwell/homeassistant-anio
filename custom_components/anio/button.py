@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
-from datetime import datetime
 
 from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
 
 from .api import AnioApiClient
 from .const import DOMAIN
@@ -19,10 +16,6 @@ from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity
 
 _LOGGER = logging.getLogger(__name__)
-
-# The watch needs some time to determine and upload a new position after a
-# locate request, so refreshing right away would only fetch the old one.
-LOCATE_REFRESH_DELAY = 60
 
 
 async def async_setup_entry(
@@ -41,7 +34,7 @@ async def async_setup_entry(
     for device_id in coordinator.data:
         entities.extend(
             [
-                AnioLocateButton(coordinator, client, device_id),
+                AnioRingButton(coordinator, client, device_id),
                 AnioPowerOffButton(coordinator, client, device_id),
                 AnioFlowerButton(coordinator, client, device_id),
             ]
@@ -50,10 +43,15 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class AnioLocateButton(AnioEntity, ButtonEntity):
-    """Button entity for triggering ANIO watch location request."""
+class AnioRingButton(AnioEntity, ButtonEntity):
+    """Button that makes the ANIO watch ring and vibrate ("find my watch").
 
-    _attr_icon = "mdi:crosshairs-gps"
+    POST /v1/device/{id}/find is the ANIO app's "Uhr finden": the watch rings
+    loudly. It does not request a new location; the watch reports its
+    position on its own interval (60 minutes by default on the ANIO 6).
+    """
+
+    _attr_icon = "mdi:bell-ring"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
@@ -62,7 +60,7 @@ class AnioLocateButton(AnioEntity, ButtonEntity):
         client: AnioApiClient,
         device_id: str,
     ) -> None:
-        """Initialize the locate button.
+        """Initialize the ring button.
 
         Args:
             coordinator: The data update coordinator.
@@ -71,40 +69,18 @@ class AnioLocateButton(AnioEntity, ButtonEntity):
         """
         super().__init__(coordinator, device_id)
         self._client = client
+        # Kept from the former "Locate" button so entity IDs don't change
         self._attr_unique_id = f"{device_id}_locate"
-        self._cancel_refresh: Callable[[], None] | None = None
 
     @property
     def name(self) -> str:
         """Return the name of the button."""
-        return "Locate"
+        return "Ring"
 
     async def async_press(self) -> None:
-        """Handle the button press."""
-        _LOGGER.info("Requesting location for device %s", self._device_id)
-
+        """Make the watch ring."""
+        _LOGGER.info("Making device %s ring", self._device_id)
         await self._client.find_device(self._device_id)
-
-        # Fetch the new location once the watch had time to report it
-        if self._cancel_refresh:
-            self._cancel_refresh()
-        self._cancel_refresh = async_call_later(
-            self.hass, LOCATE_REFRESH_DELAY, self._async_refresh_after_locate
-        )
-
-        _LOGGER.debug("Location request sent for device %s", self._device_id)
-
-    async def _async_refresh_after_locate(self, _now: datetime) -> None:
-        """Refresh the coordinator after a locate request."""
-        self._cancel_refresh = None
-        await self.coordinator.async_request_refresh()
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Cancel a pending refresh when the entity is removed."""
-        if self._cancel_refresh:
-            self._cancel_refresh()
-            self._cancel_refresh = None
-        await super().async_will_remove_from_hass()
 
 
 class AnioPowerOffButton(AnioEntity, ButtonEntity):

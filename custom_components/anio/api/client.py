@@ -218,13 +218,15 @@ class AnioApiClient:
             raise AnioDeviceNotFoundError(device_id) from None
 
     async def find_device(self, device_id: str) -> None:
-        """Request current location from a device.
+        """Make the watch ring and vibrate (ANIO app: "Uhr finden").
+
+        This does not request a new location.
 
         Args:
             device_id: The device ID.
         """
         await self._request("POST", f"/v1/device/{device_id}/find")
-        _LOGGER.debug("Location request sent to device %s", device_id)
+        _LOGGER.debug("Ring request sent to device %s", device_id)
 
     async def power_off_device(self, device_id: str) -> None:
         """Power off a device.
