@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 import aiohttp
-import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import callback
@@ -22,6 +21,11 @@ from .const import (
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
+
+try:
+    import probatio as vol
+except ImportError:  # Home Assistant < 2026.9 still uses voluptuous
+    import voluptuous as vol  # type: ignore[no-redef]
 
 _LOGGER = logging.getLogger(__name__)
 
