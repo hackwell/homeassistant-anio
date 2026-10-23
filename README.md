@@ -81,7 +81,7 @@ For each watch, the integration creates the following entities:
 | Entity | Type | Description |
 |--------|------|-------------|
 | `binary_sensor.<name>_online` | Binary Sensor | Whether watch is currently online |
-| `binary_sensor.<name>_at_<geofence>` | Binary Sensor | One per geofence, shows presence |
+| `binary_sensor.<name>_at_<geofence>` | Binary Sensor | One per geofence set up in the ANIO app; on while the watch's last position is inside. Attributes: radius, ANIO's monitoring window (`active_from`/`active_until`) |
 
 ### Device Tracker
 

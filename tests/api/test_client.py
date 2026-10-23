@@ -268,14 +268,19 @@ class TestAnioApiClient:
     async def test_get_geofences_success(
         self, client: AnioApiClient, mock_session: MagicMock
     ) -> None:
-        """Test getting geofences."""
+        """Test getting the geofences of a device (API format)."""
         geofence_data = [
             {
                 "id": "geo123",
                 "name": "Home",
-                "lat": 52.5200,
-                "lng": 13.4050,
-                "radius": 100,
+                "icon": "house",
+                "location": [52.5200, 13.4050],
+                "radiusInKm": 0.3,
+                "startTime": "07:00",
+                "endTime": "18:00",
+                "isEnabled": True,
+                "deviceId": "device123",
+                "deviceTimezone": "+02:00",
             }
         ]
 
@@ -283,11 +288,19 @@ class TestAnioApiClient:
             json_data=geofence_data
         )
 
-        geofences = await client.get_geofences()
+        geofences = await client.get_geofences("device123")
 
+        method, url = mock_session.request.call_args.args[:2]
+        assert method == "GET"
+        assert url.endswith("/v1/geofence/device123")
         assert len(geofences) == 1
         assert isinstance(geofences[0], Geofence)
         assert geofences[0].name == "Home"
+        assert geofences[0].latitude == 52.5200
+        assert geofences[0].longitude == 13.4050
+        assert geofences[0].radius == 300
+        assert geofences[0].start_time == "07:00"
+        assert geofences[0].is_enabled is True
 
     @pytest.mark.asyncio
     async def test_rate_limit_handling(
@@ -418,12 +431,12 @@ class TestAnioApiClient:
         """Test one unreadable geofence doesn't stop the update."""
         mock_session.request.return_value = self._create_mock_response(
             json_data=[
-                {"id": "g1", "name": "Home", "lat": 52.52, "lng": 13.40, "radius": 100},
-                {"id": "g2", "name": "Broken", "lat": 999, "lng": 13.40, "radius": 100},
+                {"id": "g1", "name": "Home", "location": [52.52, 13.40], "radiusInKm": 0.1},
+                {"id": "g2", "name": "Broken", "location": [999, 13.40], "radiusInKm": 0.1},
             ]
         )
 
-        geofences = await client.get_geofences()
+        geofences = await client.get_geofences("device123")
 
         assert [g.id for g in geofences] == ["g1"]
 

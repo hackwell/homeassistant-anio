@@ -70,12 +70,13 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         # The first poll only records the messages that already exist, so
         # old messages are not reported again after every restart.
         self._messages_primed = False
-        self._geofences: list[Geofence] = []
 
     @property
     def geofences(self) -> list[Geofence]:
-        """Get cached geofences."""
-        return self._geofences
+        """Get the geofences of all devices."""
+        if not self.data:
+            return []
+        return [g for state in self.data.values() for g in state.geofences]
 
     async def _async_update_data(self) -> dict[str, AnioDeviceState]:
         """Fetch data from the ANIO API.
@@ -90,9 +91,6 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         try:
             # Fetch devices
             devices = await self.client.get_devices()
-
-            # Fetch geofences (cached, refreshed each poll)
-            self._geofences = await self.client.get_geofences()
 
             # Fetch activity for messages
             activity = await self.client.get_activity()
@@ -138,13 +136,16 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                 silence_times = await self.client.get_silence_times(device.id)
                 tracking_mode = await self.client.get_tracking_mode(device.id)
 
+                # Geofences belong to a device in the ANIO API
+                geofences = await self.client.get_geofences(device.id)
+
                 is_online = self._calculate_online_status(last_seen)
 
                 state = AnioDeviceState(
                     device=device,
                     location=location,
                     # Inside/outside is computed on demand by is_device_in_geofence
-                    geofences=list(self._geofences),
+                    geofences=geofences,
                     last_seen=last_seen,
                     is_online=is_online,
                     battery_level_value=battery_level,
@@ -159,7 +160,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             _LOGGER.debug(
                 "Updated %d devices, %d geofences",
                 len(result),
-                len(self._geofences),
+                sum(len(state.geofences) for state in result.values()),
             )
             return result
 
@@ -247,7 +248,7 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         if not state.location:
             return False
 
-        for geofence in self._geofences:
+        for geofence in state.geofences:
             if geofence.id == geofence_id:
                 return self._is_inside_geofence(
                     state.location.latitude,

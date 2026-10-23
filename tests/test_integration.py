@@ -331,9 +331,9 @@ class TestFullDataFlow:
         return {
             "id": "geofence123",
             "name": "Home",
-            "lat": 52.5200,
-            "lng": 13.4050,
-            "radius": 100,
+            "location": [52.5200, 13.4050],
+            "radiusInKm": 0.1,
+            "isEnabled": True,
         }
 
     @pytest.fixture
@@ -399,9 +399,10 @@ class TestFullDataFlow:
         # Has lastResponse → online
         assert state.is_online is True
         assert state.signal_strength == 60
-        # Geofences are present
-        assert len(coordinator.geofences) == 1
-        assert coordinator.geofences[0].name == "Home"
+        # Geofences are present (fetched per device)
+        assert len(state.geofences) == 1
+        assert state.geofences[0].name == "Home"
+        mock_client.get_geofences.assert_awaited_once_with(TEST_DEVICE_ID)
 
 
 # ---------------------------------------------------------------------------

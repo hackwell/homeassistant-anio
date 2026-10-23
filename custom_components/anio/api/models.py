@@ -103,31 +103,47 @@ class ChatMessage(BaseModel):
 
 
 class Geofence(BaseModel):
-    """Geofence from the ANIO API."""
+    """Geofence from GET /v1/geofence/{deviceId}."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str
-    latitude: float = Field(alias="lat")
-    longitude: float = Field(alias="lng")
-    radius: int
+    # Center as [latitude, longitude], like DeviceLocation.position
+    location: list[float]
+    radius_km: float = Field(alias="radiusInKm")
+    # Time window in which ANIO monitors the geofence ("HH:MM")
+    start_time: str | None = Field(default=None, alias="startTime")
+    end_time: str | None = Field(default=None, alias="endTime")
+    is_enabled: bool = Field(default=True, alias="isEnabled")
+    device_id: str = Field(default="", alias="deviceId")
 
-    @field_validator("latitude")
+    @field_validator("location")
     @classmethod
-    def validate_latitude(cls, v: float) -> float:
-        """Validate latitude is between -90 and 90."""
-        if not -90 <= v <= 90:
+    def validate_location(cls, v: list[float]) -> list[float]:
+        """Validate the center is a valid [latitude, longitude] pair."""
+        if len(v) != 2:
+            raise ValueError("Location must be [latitude, longitude]")
+        if not -90 <= v[0] <= 90:
             raise ValueError("Latitude must be between -90 and 90")
-        return v
-
-    @field_validator("longitude")
-    @classmethod
-    def validate_longitude(cls, v: float) -> float:
-        """Validate longitude is between -180 and 180."""
-        if not -180 <= v <= 180:
+        if not -180 <= v[1] <= 180:
             raise ValueError("Longitude must be between -180 and 180")
         return v
+
+    @property
+    def latitude(self) -> float:
+        """Get the latitude of the center."""
+        return self.location[0]
+
+    @property
+    def longitude(self) -> float:
+        """Get the longitude of the center."""
+        return self.location[1]
+
+    @property
+    def radius(self) -> int:
+        """Get the radius in meters."""
+        return round(self.radius_km * 1000)
 
 
 class DeviceLocation(BaseModel):
