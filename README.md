@@ -68,6 +68,11 @@ translated (English and German). The entity IDs below are the English ones; a ne
 installation with Home Assistant set to German gets German IDs (e.g.
 `sensor.<name>_akku`). Existing installations keep their entity IDs.
 
+Watches added to the ANIO account and geofences created in the ANIO app get their
+entities automatically with the next update. A geofence deleted in the app makes its
+sensor unavailable; you can then delete the entity. A watch that is no longer in the
+account can be deleted in Home Assistant (device page → ⋮ → Delete).
+
 ### Sensors
 
 | Entity | Type | Description |

@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity
+from .entity import AnioEntity, async_setup_device_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,18 +29,16 @@ async def async_setup_entry(
     ]
     client: AnioApiClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
-    entities: list[ButtonEntity] = []
-
-    for device_id in coordinator.data:
-        entities.extend(
-            [
-                AnioRingButton(coordinator, client, device_id),
-                AnioPowerOffButton(coordinator, client, device_id),
-                AnioFlowerButton(coordinator, client, device_id),
-            ]
-        )
-
-    async_add_entities(entities)
+    async_setup_device_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda device_id: [
+            AnioRingButton(coordinator, client, device_id),
+            AnioPowerOffButton(coordinator, client, device_id),
+            AnioFlowerButton(coordinator, client, device_id),
+        ],
+    )
 
 
 class AnioRingButton(AnioEntity, ButtonEntity):

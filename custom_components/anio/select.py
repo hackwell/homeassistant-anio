@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN, RING_PROFILES
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity
+from .entity import AnioEntity, async_setup_device_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,12 +29,12 @@ async def async_setup_entry(
     ]
     client: AnioApiClient = hass.data[DOMAIN][entry.entry_id]["client"]
 
-    entities: list[SelectEntity] = []
-
-    for device_id in coordinator.data:
-        entities.append(AnioRingProfileSelect(coordinator, client, device_id))
-
-    async_add_entities(entities)
+    async_setup_device_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda device_id: [AnioRingProfileSelect(coordinator, client, device_id)],
+    )
 
 
 class AnioRingProfileSelect(AnioEntity, SelectEntity):
