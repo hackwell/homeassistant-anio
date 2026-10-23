@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity, async_setup_device_entities
+from .entity import AnioEntity, async_setup_device_entities, translate_api_errors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,12 +67,14 @@ class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Enable silence times."""
-        await self._client.enable_silence_times(self._device_id)
+        with translate_api_errors():
+            await self._client.enable_silence_times(self._device_id)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Disable silence times."""
-        await self._client.disable_silence_times(self._device_id)
+        with translate_api_errors():
+            await self._client.disable_silence_times(self._device_id)
         await self.coordinator.async_request_refresh()
 
     @property

@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity, async_setup_device_entities
+from .entity import AnioEntity, async_setup_device_entities, translate_api_errors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,8 @@ class AnioRingButton(AnioEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Make the watch ring."""
         _LOGGER.info("Making device %s ring", self._device_id)
-        await self._client.find_device(self._device_id)
+        with translate_api_errors():
+            await self._client.find_device(self._device_id)
 
 
 class AnioPowerOffButton(AnioEntity, ButtonEntity):
@@ -111,7 +112,8 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
             self._device_id,
         )
 
-        await self._client.power_off_device(self._device_id)
+        with translate_api_errors():
+            await self._client.power_off_device(self._device_id)
 
         _LOGGER.info("Power off command sent to device %s", self._device_id)
 
@@ -150,4 +152,5 @@ class AnioFlowerButton(AnioEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press."""
         _LOGGER.debug("Sending flower to device %s", self._device_id)
-        await self._client.send_flower(self._device_id)
+        with translate_api_errors():
+            await self._client.send_flower(self._device_id)

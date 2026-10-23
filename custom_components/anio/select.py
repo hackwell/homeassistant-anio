@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN, RING_PROFILES
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity, async_setup_device_entities
+from .entity import AnioEntity, async_setup_device_entities, translate_api_errors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +67,8 @@ class AnioRingProfileSelect(AnioEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the ring profile."""
-        await self._client.update_device_settings(
-            self._device_id, ringProfile=option
-        )
+        with translate_api_errors():
+            await self._client.update_device_settings(
+                self._device_id, ringProfile=option
+            )
         await self.coordinator.async_request_refresh()

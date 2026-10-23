@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import AnioApiClient
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
-from .entity import AnioEntity, async_setup_device_entities
+from .entity import AnioEntity, async_setup_device_entities, translate_api_errors
 
 try:
     import probatio as vol
@@ -84,6 +84,14 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         self._client = client
         self._attr_unique_id = f"{device_id}_notify"
 
+    @property
+    def _max_message_length(self) -> int:
+        """Return the maximum text length the watch accepts."""
+        device_state = self.device_state
+        if device_state:
+            return device_state.device.config.max_chat_message_length
+        return 95
+
     async def async_send_message(
         self,
         message: str,
@@ -124,17 +132,20 @@ class AnioNotifyEntity(AnioEntity, NotifyEntity):
         )
 
         if message_type == "emoji":
-            await self._client.send_emoji_message(
-                self._device_id,
-                message,
-                username=username,
-            )
+            with translate_api_errors():
+                await self._client.send_emoji_message(
+                    self._device_id,
+                    message,
+                    username=username,
+                )
         else:
-            await self._client.send_text_message(
-                self._device_id,
-                message,
-                username=username,
-            )
+            with translate_api_errors():
+                await self._client.send_text_message(
+                    self._device_id,
+                    message,
+                    username=username,
+                    max_length=self._max_message_length,
+                )
 
         _LOGGER.info(
             "Message sent to device %s",
