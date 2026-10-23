@@ -76,12 +76,13 @@ class AnioDeviceTracker(AnioEntity, TrackerEntity):
         return None
 
     @property
-    def location_accuracy(self) -> int | None:
+    def location_accuracy(self) -> float:
         """Return the location accuracy in meters."""
         device_state = self.coordinator.data.get(self._device_id)
         if device_state and device_state.location:
-            return device_state.location.accuracy
-        return None
+            return float(device_state.location.accuracy)
+        # Only read by Home Assistant when a location is available
+        return 0.0
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
