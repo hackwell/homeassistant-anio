@@ -103,6 +103,7 @@ class TestAnioDeviceTracker:
         assert attrs is not None
         assert "accuracy" in attrs
         assert "last_update" in attrs
+        assert "location_source" in attrs
 
     def test_extra_state_attributes_no_location(
         self,

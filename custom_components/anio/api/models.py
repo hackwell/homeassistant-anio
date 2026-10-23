@@ -165,6 +165,8 @@ class LocationInfo(BaseModel):
     longitude: float = Field(alias="lng")
     accuracy: int = Field(default=0)
     timestamp: datetime | None = None
+    # How the watch determined the position (positionDeterminedBy)
+    source: str | None = None
 
 
 class ActivityItem(BaseModel):
