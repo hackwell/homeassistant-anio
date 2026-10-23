@@ -13,6 +13,12 @@ from custom_components.anio.api import AnioApiError, AnioAuthError
 from custom_components.anio.coordinator import AnioDataUpdateCoordinator
 
 
+@pytest.fixture
+def hass(mock_hass: HomeAssistant) -> HomeAssistant:
+    """Use the mocked Home Assistant instance in these unit tests."""
+    return mock_hass
+
+
 class TestCoordinatorApiErrors:
     """Tests for API errors that are not connection or auth related."""
 

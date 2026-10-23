@@ -65,6 +65,12 @@ def _make_jwt(exp: int) -> str:
     return f"{header}.{payload}.{signature}"
 
 
+@pytest.fixture
+def hass(mock_hass: HomeAssistant) -> HomeAssistant:
+    """Use the mocked Home Assistant instance in these unit tests."""
+    return mock_hass
+
+
 def _expired_jwt() -> str:
     """Return a JWT that expired 1 hour ago."""
     return _make_jwt(int(time.time()) - 3600)

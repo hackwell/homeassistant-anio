@@ -30,6 +30,12 @@ from .conftest import (
 )
 
 
+@pytest.fixture
+def hass(mock_hass: HomeAssistant) -> HomeAssistant:
+    """Use the mocked Home Assistant instance in these unit tests."""
+    return mock_hass
+
+
 class TestIntegrationSetup:
     """Tests for integration setup."""
 

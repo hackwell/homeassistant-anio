@@ -20,6 +20,12 @@ from custom_components.anio.const import DOMAIN
 from .conftest import TEST_DEVICE_ID
 
 
+@pytest.fixture
+def hass(mock_hass: HomeAssistant) -> HomeAssistant:
+    """Use the mocked Home Assistant instance in these unit tests."""
+    return mock_hass
+
+
 class TestAnioOnlineSensor:
     """Tests for AnioOnlineSensor."""
 
