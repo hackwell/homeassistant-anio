@@ -20,7 +20,7 @@ from custom_components.anio.notify import (
     async_setup_entry,
 )
 
-from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
+from .conftest import TEST_DEVICE_ID
 
 
 class TestAnioNotifyEntity:
@@ -48,7 +48,7 @@ class TestAnioNotifyEntity:
 
     def test_name(self, notify_entity: AnioNotifyEntity) -> None:
         """Test entity name."""
-        assert notify_entity.name == f"{TEST_DEVICE_NAME} Message"
+        assert notify_entity.name == "Message"
 
     @pytest.mark.asyncio
     async def test_send_text_message_success(

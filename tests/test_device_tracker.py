@@ -16,7 +16,7 @@ from custom_components.anio.device_tracker import (
     async_setup_entry,
 )
 
-from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
+from .conftest import TEST_DEVICE_ID
 
 
 class TestAnioDeviceTracker:
@@ -42,7 +42,7 @@ class TestAnioDeviceTracker:
 
     def test_name(self, device_tracker: AnioDeviceTracker) -> None:
         """Test tracker name."""
-        assert device_tracker.name == f"{TEST_DEVICE_NAME} Location"
+        assert device_tracker.name == "Location"
 
     def test_source_type(self, device_tracker: AnioDeviceTracker) -> None:
         """Test source type is GPS."""
@@ -138,7 +138,7 @@ class TestDeviceTrackerSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -165,7 +165,7 @@ class TestDeviceTrackerSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
@@ -201,7 +201,7 @@ class TestDeviceTrackerSetup:
 
         entities = []
 
-        async def async_add_entities(new_entities: list, update: bool = True) -> None:
+        def async_add_entities(new_entities: list, update: bool = True) -> None:
             entities.extend(new_entities)
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
