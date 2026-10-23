@@ -24,7 +24,9 @@ class DeviceConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     generation: str
-    type: Literal["WATCH"] = "WATCH"
+    # Not used by the integration; a plain string so new device types don't
+    # make the whole device list fail validation.
+    type: str = "WATCH"
     firmware_version: str = Field(alias="firmwareVersion")
     max_chat_message_length: int = Field(default=95, alias="maxChatMessageLength")
     max_phonebook_entries: int = Field(default=20, alias="maxPhonebookEntries")
@@ -44,7 +46,8 @@ class DeviceSettings(BaseModel):
     name: str
     hex_color: str = Field(alias="hexColor")
     phone_nr: str | None = Field(default=None, alias="phoneNr")
-    gender: Literal["MALE", "FEMALE"] | None = None
+    # Not used by the integration; see DeviceConfig.type
+    gender: str | None = None
     step_target: int = Field(default=10000, alias="stepTarget")
     step_count: int = Field(default=0, alias="stepCount")
     battery: int = Field(default=0)

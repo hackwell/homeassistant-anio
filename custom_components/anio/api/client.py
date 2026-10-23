@@ -68,6 +68,22 @@ class AnioApiClient:
         self._session = session
         self._auth = auth
         self._retry_count = 0
+        # Parse problems already reported as warning (logged once each)
+        self._reported_parse_errors: set[str] = set()
+
+    def _warn_unreadable(self, what: str, err: ValidationError) -> None:
+        """Log an unreadable API entry, as warning only the first time.
+
+        Args:
+            what: Short description of the skipped entry.
+            err: The validation error.
+        """
+        message = f"{what}: {_describe_parse_error(err)}"
+        if message in self._reported_parse_errors:
+            _LOGGER.debug("%s", message)
+            return
+        self._reported_parse_errors.add(message)
+        _LOGGER.warning("%s", message)
 
     async def _request(
         self,
@@ -171,7 +187,16 @@ class AnioApiClient:
         data = await self._request("GET", "/v1/device/list")
         if not isinstance(data, list):
             return []
-        return [Device.model_validate(d) for d in data]
+
+        # Validate each device on its own, so one unexpected entry doesn't
+        # make all watches unavailable.
+        result = []
+        for item in data:
+            try:
+                result.append(Device.model_validate(item))
+            except ValidationError as err:
+                self._warn_unreadable("Skipping a device the integration can't read", err)
+        return result
 
     async def get_device(self, device_id: str) -> Device:
         """Get a specific device.
@@ -308,11 +333,21 @@ class AnioApiClient:
             data = await self._request("GET", "/v1/geofence")
             if not isinstance(data, list):
                 return []
-            return [Geofence.model_validate(g) for g in data]
         except AnioDeviceNotFoundError:
             # 404 means no geofences exist, which is valid
             _LOGGER.debug("No geofences found (404 response)")
             return []
+
+        # One broken geofence shouldn't stop the whole update
+        result = []
+        for item in data:
+            try:
+                result.append(Geofence.model_validate(item))
+            except ValidationError as err:
+                self._warn_unreadable(
+                    "Skipping a geofence the integration can't read", err
+                )
+        return result
 
     async def get_device_locations(self, device_id: str) -> list[DeviceLocation]:
         """Get location entries for a device.
@@ -346,6 +381,14 @@ class AnioApiClient:
             if not isinstance(data, dict):
                 return None
             return DeviceLocation.model_validate(data)
+        except ValidationError as err:
+            # Treat an unreadable location like no location (battery and
+            # signal become unknown) instead of failing the whole update.
+            self._warn_unreadable(
+                f"Ignoring a location the integration can't read for device {device_id}",
+                err,
+            )
+            return None
         except AnioDeviceNotFoundError:
             _LOGGER.debug("No last location for device %s (404)", device_id)
             return None
