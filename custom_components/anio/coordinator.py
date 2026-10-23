@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import math
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -19,6 +18,7 @@ from .api import (
     AnioConnectionError,
     AnioDeviceState,
     AnioRateLimitError,
+    ChatMessage,
     Geofence,
     LocationInfo,
 )
@@ -64,12 +64,12 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             update_interval=timedelta(seconds=scan_interval),
         )
         self.client = client
-        self._last_activity_check: datetime | None = None
         # Insertion-ordered, so trimming drops the oldest IDs
         self._seen_message_ids: dict[str, None] = {}
-        # The first poll only records the messages that already exist, so
-        # old messages are not reported again after every restart.
-        self._messages_primed = False
+        # Devices whose existing messages were already recorded. The first
+        # poll of a device fires no events, so old messages are not reported
+        # again after every restart.
+        self._primed_devices: set[str] = set()
 
     @property
     def geofences(self) -> list[Geofence]:
@@ -91,13 +91,6 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
         try:
             # Fetch devices
             devices = await self.client.get_devices()
-
-            # Fetch activity for messages
-            activity = await self.client.get_activity()
-            self._last_activity_check = datetime.now(UTC)
-
-            # Process incoming messages and fire events
-            await self._process_messages(activity)
 
             # Build state for each device
             result: dict[str, AnioDeviceState] = {}
@@ -123,13 +116,21 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
                     battery_level = latest.battery_level
                     signal_strength = latest.signal_strength
 
-                # Fetch chat history and find last WATCH/DEVICE message
-                last_message = None
+                # Messages from the watch arrive in the chat history (not in the
+                # activity feed). The API returns it newest first, so sort.
                 chat_messages = await self.client.get_chat_history(device.id)
-                for msg in reversed(chat_messages):
-                    if msg.sender in (SENDER_WATCH, SENDER_DEVICE):
-                        last_message = msg
-                        break
+                watch_messages = sorted(
+                    (
+                        msg
+                        for msg in chat_messages
+                        if msg.sender in (SENDER_WATCH, SENDER_DEVICE)
+                    ),
+                    key=lambda msg: msg.created_at,
+                )
+                last_message = watch_messages[-1] if watch_messages else None
+                self._fire_message_events(
+                    device.id, device.settings.name, watch_messages
+                )
 
                 # Fetch alarms, silence times, and tracking mode
                 alarms = await self.client.get_alarms(device.id)
@@ -260,68 +261,48 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
 
         return False
 
-    async def _process_messages(self, activity: list[Any]) -> None:
-        """Process activity items for incoming messages and fire events.
+    def _fire_message_events(
+        self,
+        device_id: str,
+        device_name: str,
+        messages: list[ChatMessage],
+    ) -> None:
+        """Fire anio_message_received for new messages from the watch.
 
         Args:
-            activity: Activity items from the API.
+            device_id: The device ID.
+            device_name: The device name.
+            messages: Messages sent by the watch, oldest first.
         """
-        fire_events = self._messages_primed
-        self._messages_primed = True
+        first_poll = device_id not in self._primed_devices
+        self._primed_devices.add(device_id)
 
-        for item in activity:
-            # Check if this is a message from the watch
-            if (
-                hasattr(item, "type")
-                and item.type == "MESSAGE"
-                and hasattr(item, "data")
-                and item.data
-            ):
-                message_data = item.data
-                message_id = message_data.get("id")
+        for msg in messages:
+            if msg.id in self._seen_message_ids:
+                continue
+            self._seen_message_ids[msg.id] = None
 
-                # Skip if we've already processed this message
-                if message_id and message_id in self._seen_message_ids:
-                    continue
+            if first_poll:
+                continue
 
-                # Check if it's from the watch (the API reports WATCH or DEVICE)
-                sender = message_data.get("sender")
-                if fire_events and sender in (SENDER_WATCH, SENDER_DEVICE):
-                    # Get device name
-                    device_id = message_data.get("deviceId", "")
-                    device_name = "Unknown"
+            self.hass.bus.async_fire(
+                EVENT_MESSAGE_RECEIVED,
+                {
+                    "device_id": device_id,
+                    "device_name": device_name,
+                    "message_id": msg.id,
+                    "message_type": msg.type,
+                    "content": msg.text or "",
+                    "sender": msg.sender,
+                    "timestamp": msg.created_at.isoformat(),
+                },
+            )
+            _LOGGER.debug("Fired %s message event for device %s", msg.type, device_id)
 
-                    if self.data and device_id in self.data:
-                        device_name = self.data[device_id].name
-
-                    # Fire Home Assistant event
-                    self.hass.bus.async_fire(
-                        EVENT_MESSAGE_RECEIVED,
-                        {
-                            "device_id": device_id,
-                            "device_name": device_name,
-                            "message_id": message_id,
-                            "message_type": message_data.get("type", "TEXT"),
-                            "content": message_data.get("text", ""),
-                            "sender": sender,
-                            "timestamp": message_data.get("createdAt"),
-                        },
-                    )
-
-                    _LOGGER.debug(
-                        "Fired %s message event for device %s",
-                        message_data.get("type", "TEXT"),
-                        device_id,
-                    )
-
-                # Mark message as seen
-                if message_id:
-                    self._seen_message_ids[message_id] = None
-
-                    # Limit the size of seen messages, keeping the newest 500
-                    if len(self._seen_message_ids) > 1000:
-                        for old_id in list(self._seen_message_ids)[:-500]:
-                            del self._seen_message_ids[old_id]
+        # Limit the size of seen messages, keeping the newest 500
+        if len(self._seen_message_ids) > 1000:
+            for old_id in list(self._seen_message_ids)[:-500]:
+                del self._seen_message_ids[old_id]
 
     async def async_request_refresh_for_device(self, device_id: str) -> None:
         """Request a data refresh after a device action.
