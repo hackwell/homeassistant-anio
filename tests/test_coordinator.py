@@ -15,7 +15,6 @@ from custom_components.anio.api import (
     AnioConnectionError,
     AnioRateLimitError,
 )
-from custom_components.anio.api.models import ActivityItem
 from custom_components.anio.coordinator import AnioDataUpdateCoordinator
 
 from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
@@ -52,7 +51,8 @@ class TestAnioDataUpdateCoordinator:
 
         mock_api_client.get_devices.assert_called_once()
         mock_api_client.get_geofences.assert_called_once()
-        mock_api_client.get_activity.assert_called_once()
+        # Chat messages come from the chat history, not the activity feed
+        mock_api_client.get_activity.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_update_auth_error(
@@ -176,92 +176,6 @@ class TestAnioDataUpdateCoordinator:
         """Test geofence check when no data."""
         is_inside = coordinator.is_device_in_geofence("unknown", "geofence123")
         assert is_inside is False
-
-    @pytest.mark.asyncio
-    async def test_message_event_fired(
-        self,
-        hass: HomeAssistant,
-        coordinator: AnioDataUpdateCoordinator,
-        mock_api_client: AsyncMock,
-    ) -> None:
-        """Test that message events are fired for incoming messages."""
-        # Set up activity with a message from the watch
-        
-        message_activity = ActivityItem(
-            id="activity123",
-            deviceId=TEST_DEVICE_ID,
-            type="MESSAGE",
-            timestamp=datetime.now(timezone.utc),
-            data={
-                "id": "msg123",
-                "deviceId": TEST_DEVICE_ID,
-                "text": "Hello!",
-                "type": "TEXT",
-                "sender": "WATCH",
-                "createdAt": datetime.now(timezone.utc).isoformat(),
-            },
-        )
-
-        events = []
-
-        def event_listener(event):
-            events.append(event)
-
-        hass.bus.async_listen("anio_message_received", event_listener)
-
-        # First update to populate data (no messages yet)
-        await coordinator._async_update_data()
-
-        # A new message arrives with the next poll
-        await coordinator._process_messages([message_activity])
-        await hass.async_block_till_done()
-
-        # Event should be fired
-        assert len(events) == 1
-        assert events[0].data["device_id"] == TEST_DEVICE_ID
-        assert events[0].data["content"] == "Hello!"
-        assert events[0].data["sender"] == "WATCH"
-
-    @pytest.mark.asyncio
-    async def test_message_deduplication(
-        self,
-        hass: HomeAssistant,
-        coordinator: AnioDataUpdateCoordinator,
-    ) -> None:
-        """Test that duplicate messages are not fired twice."""
-        
-        message_activity = ActivityItem(
-            id="activity123",
-            deviceId=TEST_DEVICE_ID,
-            type="MESSAGE",
-            timestamp=datetime.now(timezone.utc),
-            data={
-                "id": "msg123",
-                "deviceId": TEST_DEVICE_ID,
-                "text": "Hello!",
-                "type": "TEXT",
-                "sender": "WATCH",
-                "createdAt": datetime.now(timezone.utc).isoformat(),
-            },
-        )
-
-        events = []
-
-        def event_listener(event):
-            events.append(event)
-
-        hass.bus.async_listen("anio_message_received", event_listener)
-
-        # First poll after startup only records existing messages
-        await coordinator._process_messages([])
-
-        # Process same message twice
-        await coordinator._process_messages([message_activity])
-        await coordinator._process_messages([message_activity])
-        await hass.async_block_till_done()
-
-        # Should only fire once
-        assert len(events) == 1
 
     @pytest.mark.asyncio
     async def test_refresh_for_device(

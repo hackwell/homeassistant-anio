@@ -168,7 +168,8 @@ The same emojis as in the ANIO app's emoji bar:
 ### Message Received
 
 When a message arrives from the watch, the integration fires an `anio_message_received` event.
-Messages that already existed when Home Assistant started are not reported again:
+Messages that already existed when Home Assistant started are not reported again.
+`content` is the text, the emoji itself for emoji messages, or empty for voice messages:
 
 ```yaml
 event_type: anio_message_received
