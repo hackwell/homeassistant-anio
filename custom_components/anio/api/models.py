@@ -181,6 +181,31 @@ class ActivityItem(BaseModel):
     data: dict | None = None
 
 
+# The API sends weekdays as a 7-character bitstring starting with Sunday,
+# e.g. "0111110" for Monday to Friday.
+WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
+
+
+def parse_weekdays(value: object) -> list[str]:
+    """Convert the API's weekday bitstring into day names.
+
+    Lists of day names (older format, tests) are passed through.
+
+    Args:
+        value: Bitstring like "0111110" or a list of day names.
+
+    Returns:
+        Day names, e.g. ["MON", "TUE", "WED", "THU", "FRI"].
+    """
+    if isinstance(value, str):
+        if len(value) == len(WEEKDAYS) and set(value) <= {"0", "1"}:
+            return [day for day, bit in zip(WEEKDAYS, value, strict=True) if bit == "1"]
+        return []
+    if isinstance(value, list):
+        return [str(day) for day in value]
+    return []
+
+
 class AlarmClock(BaseModel):
     """Alarm clock entry from the ANIO API."""
 
@@ -190,8 +215,14 @@ class AlarmClock(BaseModel):
     device_id: str = Field(default="", alias="deviceId")
     time: str = Field(default="00:00")
     days: list[str] = Field(default_factory=list)
-    enabled: bool = Field(default=True)
+    enabled: bool = Field(default=True, alias="isEnabled")
     label: str | None = None
+
+    @field_validator("days", mode="before")
+    @classmethod
+    def validate_days(cls, v: object) -> list[str]:
+        """Accept the API's weekday bitstring."""
+        return parse_weekdays(v)
 
 
 class SilenceTime(BaseModel):
@@ -204,7 +235,13 @@ class SilenceTime(BaseModel):
     start_time: str = Field(default="00:00", alias="startTime")
     end_time: str = Field(default="00:00", alias="endTime")
     days: list[str] = Field(default_factory=list)
-    enabled: bool = Field(default=True)
+    enabled: bool = Field(default=True, alias="isEnabled")
+
+    @field_validator("days", mode="before")
+    @classmethod
+    def validate_days(cls, v: object) -> list[str]:
+        """Accept the API's weekday bitstring."""
+        return parse_weekdays(v)
 
 
 class AnioDeviceState(BaseModel):
