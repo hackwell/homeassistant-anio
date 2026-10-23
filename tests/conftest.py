@@ -18,8 +18,13 @@ except ImportError:
 
 
 @pytest.fixture
-def hass() -> HomeAssistant:
-    """Create a Home Assistant instance for testing."""
+def mock_hass() -> HomeAssistant:
+    """Create a mocked Home Assistant instance for unit tests.
+
+    Modules that test entities or helpers in isolation map ``hass`` to this
+    fixture. Coordinator and config flow tests use the real ``hass`` fixture
+    from pytest-homeassistant-custom-component.
+    """
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {}
     hass.config_entries = MagicMock()

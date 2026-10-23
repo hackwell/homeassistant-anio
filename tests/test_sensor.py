@@ -24,6 +24,12 @@ from custom_components.anio.sensor import (
 from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
 
 
+@pytest.fixture
+def hass(mock_hass: HomeAssistant) -> HomeAssistant:
+    """Use the mocked Home Assistant instance in these unit tests."""
+    return mock_hass
+
+
 class TestAnioBatterySensor:
     """Tests for AnioBatterySensor."""
 

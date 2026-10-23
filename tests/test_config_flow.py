@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.anio.api import AnioAuthError, AnioOtpRequiredError, AuthTokens
 from custom_components.anio.const import DOMAIN
@@ -20,6 +21,11 @@ from .conftest import (
     TEST_PASSWORD,
     TEST_REFRESH_TOKEN,
 )
+
+
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
+    """Allow Home Assistant to load the anio custom integration."""
 
 
 class TestConfigFlow:
@@ -54,7 +60,10 @@ class TestConfigFlow:
 
     @pytest.mark.asyncio
     async def test_full_flow_success(
-        self, hass: HomeAssistant, mock_auth_success: AsyncMock
+        self,
+        hass: HomeAssistant,
+        mock_auth_success: AsyncMock,
+        mock_setup_entry: AsyncMock,
     ) -> None:
         """Test successful config flow."""
         with patch(
@@ -107,7 +116,10 @@ class TestConfigFlow:
 
     @pytest.mark.asyncio
     async def test_flow_2fa_required(
-        self, hass: HomeAssistant, mock_auth_success: AsyncMock
+        self,
+        hass: HomeAssistant,
+        mock_auth_success: AsyncMock,
+        mock_setup_entry: AsyncMock,
     ) -> None:
         """Test flow when 2FA is required."""
         # First call raises OtpRequired, second succeeds
@@ -198,11 +210,11 @@ class TestConfigFlow:
     ) -> None:
         """Test flow when already configured."""
         # Create an existing entry
-        existing_entry = MagicMock()
-        existing_entry.domain = DOMAIN
-        existing_entry.unique_id = TEST_EMAIL.lower()
-
-        hass.config_entries._entries = {existing_entry.entry_id: existing_entry}
+        MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=TEST_EMAIL.lower(),
+            data={CONF_EMAIL: TEST_EMAIL},
+        ).add_to_hass(hass)
 
         with patch(
             "custom_components.anio.config_flow.AnioAuth",
@@ -225,15 +237,19 @@ class TestConfigFlow:
 
     @pytest.mark.asyncio
     async def test_reauth_flow_success(
-        self, hass: HomeAssistant, mock_auth_success: AsyncMock
+        self,
+        hass: HomeAssistant,
+        mock_auth_success: AsyncMock,
+        mock_setup_entry: AsyncMock,
     ) -> None:
         """Test reauth flow success."""
         # Create existing entry
-        existing_entry = MagicMock()
-        existing_entry.entry_id = "test_entry"
-        existing_entry.domain = DOMAIN
-        existing_entry.unique_id = TEST_EMAIL.lower()
-        existing_entry.data = {CONF_EMAIL: TEST_EMAIL}
+        existing_entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=TEST_EMAIL.lower(),
+            data={CONF_EMAIL: TEST_EMAIL},
+        )
+        existing_entry.add_to_hass(hass)
 
         with patch(
             "custom_components.anio.config_flow.AnioAuth",
@@ -257,34 +273,36 @@ class TestConfigFlow:
                 {CONF_PASSWORD: TEST_PASSWORD},
             )
 
-        # Should either create entry or abort with success
-        assert result["type"] in [FlowResultType.CREATE_ENTRY, FlowResultType.ABORT]
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "reauth_successful"
+        assert existing_entry.data["access_token"] == TEST_ACCESS_TOKEN
+        assert existing_entry.data["refresh_token"] == TEST_REFRESH_TOKEN
 
 
 class TestOptionsFlow:
     """Tests for options flow."""
 
     @pytest.mark.asyncio
-    async def test_options_flow(
-        self, hass: HomeAssistant, mock_config_entry: MagicMock
-    ) -> None:
+    async def test_options_flow(self, hass: HomeAssistant) -> None:
         """Test options flow."""
-        mock_config_entry.add_update_listener = MagicMock()
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=TEST_EMAIL.lower(),
+            data={CONF_EMAIL: TEST_EMAIL},
+            options={},
+        )
+        entry.add_to_hass(hass)
 
-        with patch.object(
-            hass.config_entries, "async_get_entry", return_value=mock_config_entry
-        ):
-            result = await hass.config_entries.options.async_init(
-                mock_config_entry.entry_id
-            )
+        result = await hass.config_entries.options.async_init(entry.entry_id)
 
-            assert result["type"] == FlowResultType.FORM
-            assert result["step_id"] == "init"
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "init"
 
-            result = await hass.config_entries.options.async_configure(
-                result["flow_id"],
-                {"scan_interval": 120},
-            )
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {"scan_interval": 120},
+        )
 
-            assert result["type"] == FlowResultType.CREATE_ENTRY
-            assert result["data"]["scan_interval"] == 120
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"]["scan_interval"] == 120
+        assert entry.options == {"scan_interval": 120}

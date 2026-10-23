@@ -15,6 +15,7 @@ from custom_components.anio.api import (
     AnioConnectionError,
     AnioRateLimitError,
 )
+from custom_components.anio.api.models import ActivityItem
 from custom_components.anio.coordinator import AnioDataUpdateCoordinator
 
 from .conftest import TEST_DEVICE_ID, TEST_DEVICE_NAME
@@ -211,6 +212,7 @@ class TestAnioDataUpdateCoordinator:
 
         # A new message arrives with the next poll
         await coordinator._process_messages([message_activity])
+        await hass.async_block_till_done()
 
         # Event should be fired
         assert len(events) == 1
@@ -254,6 +256,7 @@ class TestAnioDataUpdateCoordinator:
         # Process same message twice
         await coordinator._process_messages([message_activity])
         await coordinator._process_messages([message_activity])
+        await hass.async_block_till_done()
 
         # Should only fire once
         assert len(events) == 1
