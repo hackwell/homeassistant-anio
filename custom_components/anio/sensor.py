@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -13,7 +13,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
+from .api import AlarmClock
+from .api.models import WEEKDAYS
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity, async_setup_device_entities
@@ -165,6 +168,46 @@ class AnioLastMessageSensor(AnioEntity, SensorEntity):
         return None
 
 
+def next_alarm(
+    alarms: list[AlarmClock], now: datetime
+) -> tuple[AlarmClock, datetime] | None:
+    """Find the enabled alarm that rings next, honouring its weekdays.
+
+    Args:
+        alarms: The alarms of a watch.
+        now: The current local time.
+
+    Returns:
+        The alarm and when it rings, or None if no alarm is enabled.
+    """
+    upcoming: list[tuple[AlarmClock, datetime]] = []
+    for alarm in alarms:
+        if not alarm.enabled:
+            continue
+        try:
+            alarm_time = time.fromisoformat(alarm.time)
+        except ValueError:
+            continue
+        # One week ahead covers every weekday; today only if still to come
+        for offset in range(8):
+            day = now + timedelta(days=offset)
+            # WEEKDAYS starts on Sunday, weekday() on Monday
+            weekday = WEEKDAYS[(day.weekday() + 1) % 7]
+            # An alarm without days is treated as daily
+            if alarm.days and weekday not in alarm.days:
+                continue
+            rings_at = day.replace(
+                hour=alarm_time.hour,
+                minute=alarm_time.minute,
+                second=0,
+                microsecond=0,
+            )
+            if rings_at > now:
+                upcoming.append((alarm, rings_at))
+                break
+    return min(upcoming, key=lambda item: item[1], default=None)
+
+
 class AnioNextAlarmSensor(AnioEntity, SensorEntity):
     """Sensor entity for the next alarm on the ANIO watch."""
 
@@ -188,13 +231,8 @@ class AnioNextAlarmSensor(AnioEntity, SensorEntity):
         if not device_state:
             return None
 
-        enabled_alarms = [a for a in device_state.alarms if a.enabled]
-        if not enabled_alarms:
-            return None
-
-        # Sort by time and return the earliest
-        enabled_alarms.sort(key=lambda a: a.time)
-        return enabled_alarms[0].time
+        upcoming = next_alarm(device_state.alarms, dt_util.now())
+        return upcoming[0].time if upcoming else None
 
     @property
     def extra_state_attributes(self) -> dict[str, int | str | None] | None:
@@ -203,16 +241,14 @@ class AnioNextAlarmSensor(AnioEntity, SensorEntity):
         if not device_state:
             return None
 
-        enabled_alarms = [a for a in device_state.alarms if a.enabled]
-        next_alarm = None
-        if enabled_alarms:
-            enabled_alarms.sort(key=lambda a: a.time)
-            next_alarm = enabled_alarms[0]
+        upcoming = next_alarm(device_state.alarms, dt_util.now())
+        alarm, rings_at = upcoming if upcoming else (None, None)
 
         return {
             "alarm_count": len(device_state.alarms),
-            "enabled_count": len(enabled_alarms),
-            "next_alarm_days": ", ".join(next_alarm.days) if next_alarm else None,
+            "enabled_count": sum(1 for a in device_state.alarms if a.enabled),
+            "next_alarm_days": ", ".join(alarm.days) if alarm else None,
+            "next_alarm_at": rings_at.isoformat() if rings_at else None,
         }
 
 

@@ -11,7 +11,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.anio.api import AnioAuthError, AnioOtpRequiredError, AuthTokens
+from custom_components.anio.api import (
+    AnioApiError,
+    AnioAuthError,
+    AnioConnectionError,
+    AnioOtpRequiredError,
+    AuthTokens,
+)
 from custom_components.anio.const import DOMAIN
 
 from .conftest import (
@@ -113,6 +119,32 @@ class TestConfigFlow:
 
         assert result["type"] == FlowResultType.FORM
         assert result["errors"]["base"] == "invalid_auth"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "error",
+        [AnioConnectionError(), AnioApiError("Service Unavailable", 503)],
+        ids=["network", "server_error"],
+    )
+    async def test_flow_cannot_connect(
+        self, hass: HomeAssistant, error: Exception
+    ) -> None:
+        """Test network and server problems show "cannot connect"."""
+        with patch(
+            "custom_components.anio.config_flow.AnioAuth",
+        ) as mock_auth_class:
+            mock_auth_class.return_value.login = AsyncMock(side_effect=error)
+
+            result = await hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": config_entries.SOURCE_USER}
+            )
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {CONF_EMAIL: TEST_EMAIL, CONF_PASSWORD: TEST_PASSWORD},
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"]["base"] == "cannot_connect"
 
     @pytest.mark.asyncio
     async def test_flow_2fa_required(

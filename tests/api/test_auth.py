@@ -140,6 +140,26 @@ class TestAnioAuth:
             await auth.login()
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", [429, 503])
+    async def test_login_server_error_is_not_invalid_auth(
+        self, auth: AnioAuth, mock_session: MagicMock, status: int
+    ) -> None:
+        """Test server problems at login are not reported as wrong credentials."""
+        mock_response = MagicMock()
+        mock_response.status = status
+        mock_response.text = AsyncMock(return_value="Service Unavailable")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post.return_value = mock_response
+
+        with pytest.raises(AnioApiError) as exc_info:
+            await auth.login()
+
+        assert not isinstance(exc_info.value, AnioAuthError)
+        assert exc_info.value.status_code == status
+
+    @pytest.mark.asyncio
     async def test_login_otp_required(
         self, auth: AnioAuth, mock_session: MagicMock
     ) -> None:

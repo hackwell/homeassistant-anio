@@ -16,7 +16,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import AnioAuth, AnioAuthError, AnioOtpRequiredError
+from .api import AnioApiError, AnioAuth, AnioAuthError, AnioOtpRequiredError
 from .const import (
     CONF_ACCESS_TOKEN,
     CONF_APP_UUID,
@@ -103,7 +103,8 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("Authentication failed: %s", err)
                 errors["base"] = "invalid_auth"
 
-            except aiohttp.ClientError as err:
+            except (aiohttp.ClientError, AnioApiError) as err:
+                # AnioConnectionError and server errors (5xx, 429)
                 _LOGGER.error("Connection failed: %s", err)
                 errors["base"] = "cannot_connect"
 
@@ -147,7 +148,8 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("2FA authentication failed: %s", err)
                 errors["base"] = "invalid_otp"
 
-            except aiohttp.ClientError as err:
+            except (aiohttp.ClientError, AnioApiError) as err:
+                # AnioConnectionError and server errors (5xx, 429)
                 _LOGGER.error("Connection failed: %s", err)
                 errors["base"] = "cannot_connect"
 
@@ -264,7 +266,7 @@ class AnioConfigFlow(ConfigFlow, domain=DOMAIN):
             except AnioAuthError:
                 errors["base"] = "invalid_auth"
 
-            except aiohttp.ClientError:
+            except (aiohttp.ClientError, AnioApiError):
                 errors["base"] = "cannot_connect"
 
             except Exception:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
+from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -86,7 +86,6 @@ class AnioPowerOffButton(AnioEntity, ButtonEntity):
 
     _attr_icon = "mdi:power"
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_device_class = ButtonDeviceClass.RESTART
 
     def __init__(
         self,
