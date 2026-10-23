@@ -359,6 +359,86 @@ class TestAnioApiClient:
         assert activity[0].type == "MESSAGE"
 
 
+    @staticmethod
+    def _device(device_id: str, **settings: str) -> dict:
+        """Create device data as returned by /v1/device/list."""
+        return {
+            "id": device_id,
+            "imei": "123456789012345",
+            "config": {"generation": "6", "type": "WATCH", "firmwareVersion": "V2"},
+            "settings": {"name": "Test Watch", "hexColor": "#FF0000", **settings},
+        }
+
+    @pytest.mark.asyncio
+    async def test_get_devices_accepts_unknown_values(
+        self, client: AnioApiClient, mock_session: MagicMock
+    ) -> None:
+        """Test new values in fields the integration doesn't use are accepted."""
+        device = self._device("device123", gender="DIVERSE")
+        device["config"]["type"] = "TRACKER"
+        mock_session.request.return_value = self._create_mock_response(
+            json_data=[device]
+        )
+
+        devices = await client.get_devices()
+
+        assert [d.id for d in devices] == ["device123"]
+        assert devices[0].settings.gender == "DIVERSE"
+        assert devices[0].config.type == "TRACKER"
+
+    @pytest.mark.asyncio
+    async def test_get_devices_skips_unreadable_device(
+        self,
+        client: AnioApiClient,
+        mock_session: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test one unreadable device doesn't hide the others."""
+        broken = {"id": "broken", "imei": "1", "config": {"generation": "6"}}
+        mock_session.request.return_value = self._create_mock_response(
+            json_data=[self._device("device123"), broken]
+        )
+
+        devices = await client.get_devices()
+
+        assert [d.id for d in devices] == ["device123"]
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+        assert "Skipping a device" in warnings[0].getMessage()
+
+        # The same problem is only reported once as a warning
+        await client.get_devices()
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_geofences_skips_unreadable_geofence(
+        self, client: AnioApiClient, mock_session: MagicMock
+    ) -> None:
+        """Test one unreadable geofence doesn't stop the update."""
+        mock_session.request.return_value = self._create_mock_response(
+            json_data=[
+                {"id": "g1", "name": "Home", "lat": 52.52, "lng": 13.40, "radius": 100},
+                {"id": "g2", "name": "Broken", "lat": 999, "lng": 13.40, "radius": 100},
+            ]
+        )
+
+        geofences = await client.get_geofences()
+
+        assert [g.id for g in geofences] == ["g1"]
+
+    @pytest.mark.asyncio
+    async def test_get_last_location_unreadable_is_none(
+        self, client: AnioApiClient, mock_session: MagicMock
+    ) -> None:
+        """Test an unreadable location is treated like no location."""
+        mock_session.request.return_value = self._create_mock_response(
+            json_data={"position": [52.52, 13.40]}
+        )
+
+        assert await client.get_last_location("device123") is None
+
+
 class TestDescribeParseError:
     """Tests for logging parse errors without API data."""
 
