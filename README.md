@@ -183,6 +183,27 @@ The same emojis as in the ANIO app's emoji bar:
 | E02 | 😘 | E05 | 😁 | E08 | 👍 |
 | E03 | 😎 | E06 | 😛 | E09 | ❤️ |
 
+### Alarms
+
+`anio.create_alarm` and `anio.delete_alarm` target a watch (device), not an entity.
+Times are local. The **Next Alarm** sensor shows the next one.
+
+```yaml
+# Wake-up alarm on school days
+service: anio.create_alarm
+data:
+  device_id: 0123456789abcdef0123456789abcdef  # pick the watch in the UI
+  time: "06:30"
+  days: [mon, tue, wed, thu, fri]  # default; also sat, sun
+  enabled: true  # default
+
+# Delete the alarm(s) at 06:30
+service: anio.delete_alarm
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  time: "06:30"
+```
+
 ## Events
 
 ### Message Received

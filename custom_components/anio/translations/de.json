@@ -152,6 +152,42 @@
           "description": "Wird auf der Uhr als Absender angezeigt. Standard ist \"Home Assistant\"; ohne Absender kann die Uhr die Nachricht nicht anzeigen."
         }
       }
+    },
+    "create_alarm": {
+      "name": "Wecker anlegen",
+      "description": "Legt einen Wecker auf einer ANIO-Uhr an.",
+      "fields": {
+        "device_id": {
+          "name": "Uhr",
+          "description": "Die ANIO-Uhr."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Wann der Wecker klingelt (Ortszeit)."
+        },
+        "days": {
+          "name": "Tage",
+          "description": "Wochentage, an denen der Wecker klingelt. Standard ist Montag bis Freitag."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob der Wecker klingelt. Standard ist an."
+        }
+      }
+    },
+    "delete_alarm": {
+      "name": "Wecker löschen",
+      "description": "Löscht die Wecker zur angegebenen Uhrzeit von einer ANIO-Uhr.",
+      "fields": {
+        "device_id": {
+          "name": "Uhr",
+          "description": "Die ANIO-Uhr."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Die Uhrzeit des Weckers, der gelöscht werden soll."
+        }
+      }
     }
   },
   "exceptions": {
@@ -178,6 +214,22 @@
     },
     "locate_cooldown": {
       "message": "Die Uhr wird gerade schon geortet. Bitte warte noch {seconds} Sekunden."
+    },
+    "alarm_not_found": {
+      "message": "Die Uhr hat keinen Wecker um {time}."
+    }
+  },
+  "selector": {
+    "weekday": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
     }
   }
 }
