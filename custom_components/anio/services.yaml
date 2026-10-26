@@ -32,3 +32,58 @@ send_message:
       example: "Mom"
       selector:
         text:
+
+create_alarm:
+  name: Create Alarm
+  description: Create an alarm on an ANIO watch.
+  fields:
+    device_id:
+      name: Watch
+      description: The ANIO watch.
+      required: true
+      selector:
+        device:
+          integration: anio
+    time:
+      name: Time
+      description: When the alarm rings (local time).
+      required: true
+      example: "06:30"
+      selector:
+        time:
+    days:
+      name: Days
+      description: Weekdays on which the alarm rings. Defaults to Monday to Friday.
+      required: false
+      default: [mon, tue, wed, thu, fri]
+      selector:
+        select:
+          multiple: true
+          translation_key: weekday
+          options: [mon, tue, wed, thu, fri, sat, sun]
+    enabled:
+      name: Enabled
+      description: Whether the alarm rings. Defaults to on.
+      required: false
+      default: true
+      selector:
+        boolean:
+
+delete_alarm:
+  name: Delete Alarm
+  description: Delete the alarms at the given time from an ANIO watch.
+  fields:
+    device_id:
+      name: Watch
+      description: The ANIO watch.
+      required: true
+      selector:
+        device:
+          integration: anio
+    time:
+      name: Time
+      description: The time of the alarm to delete.
+      required: true
+      example: "06:30"
+      selector:
+        time:

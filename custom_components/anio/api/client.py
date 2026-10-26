@@ -37,6 +37,7 @@ from .models import (
     Geofence,
     SchoolWayTime,
     SilenceTime,
+    format_weekday_bits,
 )
 
 if TYPE_CHECKING:
@@ -546,13 +547,17 @@ class AnioApiClient:
         device_id: str,
         time: str,
         days: list[str],
+        enabled: bool = True,
     ) -> AlarmClock | None:
         """Create an alarm clock for a device.
+
+        Alarm times are local; unlike school way times they have no offset.
 
         Args:
             device_id: The device ID.
             time: Alarm time in HH:MM format.
             days: List of day codes (e.g. ["MON", "TUE"]).
+            enabled: Whether the alarm rings.
 
         Returns:
             The created alarm, or None on failure.
@@ -560,7 +565,8 @@ class AnioApiClient:
         payload = {
             "deviceId": device_id,
             "time": time,
-            "days": days,
+            "days": format_weekday_bits(days),
+            "isEnabled": enabled,
         }
         data = await self._request("POST", "/v1/alarm-clock", json=payload)
         if isinstance(data, dict):

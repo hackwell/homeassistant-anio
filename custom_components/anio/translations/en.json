@@ -152,6 +152,42 @@
           "description": "Shown as the sender on the watch. Defaults to \"Home Assistant\"; the watch needs a sender name to display the message."
         }
       }
+    },
+    "create_alarm": {
+      "name": "Create alarm",
+      "description": "Creates an alarm on an ANIO watch.",
+      "fields": {
+        "device_id": {
+          "name": "Watch",
+          "description": "The ANIO watch."
+        },
+        "time": {
+          "name": "Time",
+          "description": "When the alarm rings (local time)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays on which the alarm rings. Defaults to Monday to Friday."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the alarm rings. Defaults to on."
+        }
+      }
+    },
+    "delete_alarm": {
+      "name": "Delete alarm",
+      "description": "Deletes the alarms at the given time from an ANIO watch.",
+      "fields": {
+        "device_id": {
+          "name": "Watch",
+          "description": "The ANIO watch."
+        },
+        "time": {
+          "name": "Time",
+          "description": "The time of the alarm to delete."
+        }
+      }
     }
   },
   "exceptions": {
@@ -178,6 +214,22 @@
     },
     "locate_cooldown": {
       "message": "The watch is already being located. Please wait {seconds} more seconds."
+    },
+    "alarm_not_found": {
+      "message": "The watch has no alarm at {time}."
+    }
+  },
+  "selector": {
+    "weekday": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
     }
   }
 }

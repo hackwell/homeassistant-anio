@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -20,6 +21,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import AnioDataUpdateCoordinator
+from .services import async_setup_services
 
 if TYPE_CHECKING:
     pass
@@ -36,6 +38,23 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.SELECT,
 ]
+
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:  # noqa: ARG001
+    """Register the integration's actions.
+
+    Args:
+        hass: Home Assistant instance.
+        config: The YAML configuration (unused; set up from the UI).
+
+    Returns:
+        True.
+    """
+    await async_setup_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

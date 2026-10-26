@@ -321,6 +321,18 @@ def format_weekdays(days: list[str], language: str) -> str:
     return ", ".join(parts)
 
 
+def format_weekday_bits(days: list[str]) -> str:
+    """Convert day codes into the API's weekday bitstring (Sunday first).
+
+    Args:
+        days: Day codes as in WEEKDAYS.
+
+    Returns:
+        E.g. "0111110" for Monday to Friday.
+    """
+    return "".join("1" if day in days else "0" for day in WEEKDAYS)
+
+
 def parse_weekdays(value: object) -> list[str]:
     """Convert the API's weekday bitstring into day names.
 
