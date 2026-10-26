@@ -72,6 +72,9 @@
       "online": {
         "name": "Online"
       },
+      "silence_active": {
+        "name": "Ruhezeit aktiv"
+      },
       "school_way": {
         "name": "Schulweg"
       },
@@ -102,7 +105,7 @@
     },
     "switch": {
       "silence_time": {
-        "name": "Ruhezeit"
+        "name": "Ruhezeiten"
       }
     },
     "select": {
