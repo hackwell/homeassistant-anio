@@ -315,3 +315,50 @@ async def test_silence_switch_refetches_settings(
 
     coordinator.invalidate_slow_data.assert_called_once_with(TEST_DEVICE_ID)
     coordinator.async_request_refresh.assert_awaited_once()
+
+
+class TestCombinedLocations:
+    """The locations of all watches come in one request."""
+
+    @pytest.fixture
+    def coordinator(
+        self, hass: HomeAssistant, mock_api_client: AsyncMock
+    ) -> AnioDataUpdateCoordinator:
+        """Create a coordinator for testing."""
+        return AnioDataUpdateCoordinator(
+            hass=hass,
+            client=mock_api_client,
+            scan_interval=300,
+        )
+
+    @pytest.mark.asyncio
+    async def test_uses_combined_location(
+        self, coordinator: AnioDataUpdateCoordinator, mock_api_client: AsyncMock
+    ) -> None:
+        """Test no per-watch location request is made when the watch is included."""
+        location = TestFewerApiCalls._location("NORMAL")
+        mock_api_client.get_last_locations.return_value = {TEST_DEVICE_ID: location}
+
+        data = await coordinator._async_update_data()
+
+        assert data[TEST_DEVICE_ID].battery_level == 51
+        mock_api_client.get_last_location.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("combined", [None, {}], ids=["unavailable", "missing"])
+    async def test_falls_back_per_watch(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        mock_api_client: AsyncMock,
+        combined: dict | None,
+    ) -> None:
+        """Test the per-watch request is used if the watch isn't included."""
+        mock_api_client.get_last_locations.return_value = combined
+        mock_api_client.get_last_location.return_value = TestFewerApiCalls._location(
+            "NORMAL"
+        )
+
+        data = await coordinator._async_update_data()
+
+        mock_api_client.get_last_location.assert_awaited_once_with(TEST_DEVICE_ID)
+        assert data[TEST_DEVICE_ID].battery_level == 51

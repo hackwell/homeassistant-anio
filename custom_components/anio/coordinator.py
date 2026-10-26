@@ -120,9 +120,14 @@ class AnioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, AnioDeviceState]
             # Build state for each device
             result: dict[str, AnioDeviceState] = {}
 
+            # One request for the locations of all watches; per watch only
+            # if a watch is missing from it
+            locations = await self.client.get_last_locations() or {}
+
             for device in devices:
-                # Fetch last location from /v1/location/{deviceId}/last
-                latest = await self.client.get_last_location(device.id)
+                latest = locations.get(device.id)
+                if latest is None:
+                    latest = await self.client.get_last_location(device.id)
 
                 location: LocationInfo | None = None
                 last_seen: datetime | None = None
