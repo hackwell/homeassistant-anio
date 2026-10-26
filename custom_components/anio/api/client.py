@@ -641,6 +641,39 @@ class AnioApiClient:
             _LOGGER.debug("No school way times for device %s (404)", device_id)
             return []
 
+    async def set_school_way_time_enabled(self, time_id: str, enabled: bool) -> None:
+        """Switch one school way time on or off (times and days stay).
+
+        Args:
+            time_id: The school way time ID.
+            enabled: True to switch it on.
+        """
+        await self._request(
+            "PATCH", f"/v2/school-way-time/{time_id}", json={"isEnabled": enabled}
+        )
+
+    async def set_silence_time_enabled(self, time_id: str, enabled: bool) -> None:
+        """Switch one silence time on or off (times and days stay).
+
+        Args:
+            time_id: The silence time ID.
+            enabled: True to switch it on.
+        """
+        await self._request(
+            "PATCH", f"/v1/silence-time/{time_id}", json={"isEnabled": enabled}
+        )
+
+    async def set_geofence_enabled(self, fence_id: str, enabled: bool) -> None:
+        """Switch ANIO's monitoring of one geofence on or off.
+
+        Args:
+            fence_id: The geofence ID.
+            enabled: True to monitor it.
+        """
+        await self._request(
+            "PATCH", f"/v1/geofence/{fence_id}", json={"isEnabled": enabled}
+        )
+
     async def enable_silence_times(self, device_id: str) -> None:
         """Enable all silence times for a device.
 

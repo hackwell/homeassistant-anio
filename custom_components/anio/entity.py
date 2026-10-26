@@ -185,6 +185,7 @@ class AnioGeofenceEntity(CoordinatorEntity["AnioDataUpdateCoordinator"]):
         super().__init__(coordinator)
         self._device_id = device_id
         self._geofence = geofence
+        self._attr_translation_placeholders = {"geofence_name": geofence.name}
 
     @property
     def device_state(self) -> AnioDeviceState | None:
@@ -195,8 +196,13 @@ class AnioGeofenceEntity(CoordinatorEntity["AnioDataUpdateCoordinator"]):
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.coordinator.last_update_success and self.device_state is not None
+        """Return False once the geofence was deleted in the ANIO app."""
+        device_state = self.device_state
+        return (
+            self.coordinator.last_update_success
+            and device_state is not None
+            and any(g.id == self._geofence.id for g in device_state.geofences)
+        )
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -219,6 +225,24 @@ class AnioGeofenceEntity(CoordinatorEntity["AnioDataUpdateCoordinator"]):
             name=f"ANIO {self._device_id[:8]}",
             manufacturer="ANIO",
         )
+
+    @property
+    def _current_geofence(self) -> Geofence:
+        """Return the geofence as of the last update (e.g. after a rename)."""
+        device_state = self.device_state
+        if device_state:
+            for geofence in device_state.geofences:
+                if geofence.id == self._geofence.id:
+                    return geofence
+        return self._geofence
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Keep the geofence name current, e.g. after a rename in the app."""
+        self._attr_translation_placeholders = {
+            "geofence_name": self._current_geofence.name
+        }
+        super()._handle_coordinator_update()
 
     @property
     def is_inside(self) -> bool:

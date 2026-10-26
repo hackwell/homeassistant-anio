@@ -27,6 +27,8 @@ def mock_hass() -> HomeAssistant:
     """
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {}
+    hass.config = MagicMock()
+    hass.config.language = "en"
     hass.config_entries = MagicMock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)

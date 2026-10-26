@@ -112,6 +112,15 @@
       },
       "explorer_mode": {
         "name": "Explorer Mode"
+      },
+      "school_way_time": {
+        "name": "School way {period}"
+      },
+      "silence_time_entry": {
+        "name": "Silence time {period}"
+      },
+      "geofence_monitoring": {
+        "name": "Monitor {geofence_name}"
       }
     },
     "select": {

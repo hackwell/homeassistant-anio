@@ -265,6 +265,62 @@ class ActivityItem(BaseModel):
 WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 
 
+DAY_NAMES = {
+    "de": {
+        "MON": "Mo",
+        "TUE": "Di",
+        "WED": "Mi",
+        "THU": "Do",
+        "FRI": "Fr",
+        "SAT": "Sa",
+        "SUN": "So",
+    },
+    "en": {
+        "MON": "Mon",
+        "TUE": "Tue",
+        "WED": "Wed",
+        "THU": "Thu",
+        "FRI": "Fri",
+        "SAT": "Sat",
+        "SUN": "Sun",
+    },
+}
+EVERY_DAY = {"de": "täglich", "en": "daily"}
+
+
+def format_weekdays(days: list[str], language: str) -> str:
+    """Write weekdays compactly, Monday first, e.g. "Mo–Fr" or "Mo, Mi".
+
+    Args:
+        days: Day codes as in WEEKDAYS.
+        language: Home Assistant's language; German or English names.
+
+    Returns:
+        The days, runs of three or more days as a range.
+    """
+    lang = "de" if language.startswith("de") else "en"
+    names = DAY_NAMES[lang]
+    week = [*WEEKDAYS[1:], WEEKDAYS[0]]
+    selected = [day in days for day in week]
+    if all(selected):
+        return EVERY_DAY[lang]
+    parts: list[str] = []
+    index = 0
+    while index < len(week):
+        if not selected[index]:
+            index += 1
+            continue
+        end = index
+        while end + 1 < len(week) and selected[end + 1]:
+            end += 1
+        if end - index >= 2:
+            parts.append(f"{names[week[index]]}–{names[week[end]]}")
+        else:
+            parts.extend(names[week[i]] for i in range(index, end + 1))
+        index = end + 1
+    return ", ".join(parts)
+
+
 def parse_weekdays(value: object) -> list[str]:
     """Convert the API's weekday bitstring into day names.
 
@@ -323,6 +379,19 @@ class TimeWindow(BaseModel):
     def validate_days(cls, v: object) -> list[str]:
         """Accept the API's weekday bitstring."""
         return parse_weekdays(v)
+
+    def describe(self, language: str) -> str:
+        """Describe the window for an entity name, e.g. "07:35–08:05 Mo–Fr".
+
+        Args:
+            language: Home Assistant's language.
+
+        Returns:
+            Local times and the weekdays.
+        """
+        period = f"{self.local_start_time}–{self.local_end_time}"
+        days = format_weekdays(self.days, language)
+        return f"{period} {days}" if days else period
 
     @property
     def local_start_time(self) -> str:
