@@ -128,3 +128,18 @@ class TestSilenceTimeSwitch:
             "enabled": True,
         }
         assert attrs["periods"][1]["days"] == "FRI"
+
+
+def test_silence_times_are_not_shifted() -> None:
+    """Test silence times (no deviceTimezone) stay as the app shows them."""
+    silence = SilenceTime.model_validate(
+        {
+            "id": "s1",
+            "days": "0111100",
+            "isEnabled": True,
+            "startTime": "08:00",
+            "endTime": "16:00",
+        }
+    )
+
+    assert (silence.local_start_time, silence.local_end_time) == ("08:00", "16:00")
