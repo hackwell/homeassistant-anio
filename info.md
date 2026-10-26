@@ -5,11 +5,13 @@ This custom integration allows you to monitor and interact with ANIO smartwatche
 ## Features
 
 - **Status Monitoring**: Battery level, signal strength, online status, last seen timestamp
-- **Location Tracking**: Watch location on the Home Assistant map
-- **Geofence Sensors**: Know whether the watch is inside the geofences defined in the ANIO app
+- **Location Tracking**: Watch location on the map, **Locate Now** (fresh position within about a minute) and **Explorer Mode**
+- **Geofences**: Presence per geofence defined in the ANIO app, plus a switch for ANIO's monitoring
+- **School Way and Silence Times**: See when they are running, and pause single entries, e.g. during the school holidays
 - **Messaging**: Send text and emoji messages to the watch
-- **Message Events**: Receive events when messages arrive from the watch, plus a sensor with the last message
-- **Watch Settings**: Ring profile, silence times on/off, tracking mode and next alarm
+- **Events**: Messages from the watch and ANIO's alerts (geofence entered/left, low battery)
+- **Alarms**: Next alarm sensor, create and delete alarms
+- **Watch Settings**: Ring profile, all silence times on/off, tracking mode
 - **Device Control**: Ring button to find the watch and power off functionality
 
 ## Supported Devices
@@ -40,7 +42,7 @@ For each watch, the integration creates:
 | Signal Strength | Sensor | Mobile signal strength |
 | Last Seen | Sensor | Timestamp of last communication |
 | Last Message | Sensor | Last message sent by the watch |
-| Next Alarm | Sensor | Earliest enabled alarm time |
+| Next Alarm | Sensor | Time of the alarm that rings next (weekdays considered) |
 | Tracking Mode | Sensor | Current tracking mode |
 | Online | Binary Sensor | Whether watch is currently online |
 | School Way | Binary Sensor | On while a school way time is running |
@@ -58,9 +60,15 @@ For each watch, the integration creates:
 | Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |
 
+## Actions
+
+- `anio.send_message`: text or emoji message with sender name
+- `anio.create_alarm` / `anio.delete_alarm`: alarms on a watch
+
 ## Events
 
-The integration fires `anio_message_received` events when a message arrives from the watch:
+The integration fires `anio_activity` events for ANIO's alerts (geofence entered/left,
+low battery) and `anio_message_received` events when a message arrives from the watch:
 
 ```yaml
 event_type: anio_message_received
@@ -108,5 +116,5 @@ automation:
 
 ## Support
 
-- [GitHub Issues](https://github.com/your-repo/anio-hass/issues)
+- [GitHub Issues](https://github.com/hackwell/homeassistant-anio/issues)
 - [Home Assistant Community Forum](https://community.home-assistant.io/)

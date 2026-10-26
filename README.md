@@ -9,12 +9,15 @@ A Home Assistant custom integration for ANIO children's smartwatches. Monitor yo
 ## Features
 
 - **Status Monitoring** - Battery level, signal strength, online status, last seen timestamp
-- **Location Tracking** - Watch location displayed on the Home Assistant map
-- **Geofence Sensors** - Binary sensors showing whether the watch is inside the geofences defined in the ANIO app
+- **Location Tracking** - Watch location on the Home Assistant map, **Locate Now** for a fresh position within about a minute, and **Explorer Mode** (every 5 minutes for an hour)
+- **Geofences** - Presence sensor per geofence defined in the ANIO app, plus a switch for ANIO's monitoring
+- **School Way and Silence Times** - Sensors that are on while a school way or silence time is running, and a switch per entry, e.g. to pause them during the school holidays
 - **Messaging** - Send text messages (up to 95 characters) and emoji messages to the watch
-- **Message Events** - Receive Home Assistant events when messages arrive from the watch, plus a sensor with the last message
-- **Watch Settings** - Ring profile, silence times on/off, tracking mode and next alarm
+- **Events** - Home Assistant events for messages from the watch and for ANIO's alerts (geofence entered/left, low battery)
+- **Alarms** - Next alarm sensor, actions to create and delete alarms
+- **Watch Settings** - Ring profile, all silence times on/off, tracking mode
 - **Device Control** - Ring button to find the watch, Power Off button
+- **Diagnostics** - Downloadable diagnostics without personal data
 
 ## Supported Devices
 
@@ -63,8 +66,9 @@ After setup, you can configure the following options:
 
 Location, battery, messages and ANIO's alerts are fetched at every scan. Alarms,
 silence and school way times and geofences rarely change, so they are only fetched every 30
-minutes (silence times right away after switching them in Home Assistant). A
-geofence added in the ANIO app can therefore take up to 30 minutes to appear.
+minutes, and right away after changing them in Home Assistant. A school way time,
+silence time or geofence added in the ANIO app can therefore take up to 30 minutes
+to appear.
 
 ## Entities
 
@@ -86,8 +90,8 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 | `sensor.<name>_signal_strength` | Sensor | Mobile signal strength (%) |
 | `sensor.<name>_last_seen` | Sensor | Timestamp of last communication |
 | `sensor.<name>_last_message` | Sensor | Text of the last message sent by the watch (attributes: sender, type, created_at, is_read) |
-| `sensor.<name>_next_alarm` | Sensor | Earliest enabled alarm time (does not take weekdays into account yet) |
-| `sensor.<name>_tracking_mode` | Sensor | Current tracking mode reported by the watch |
+| `sensor.<name>_next_alarm` | Sensor | Time of the alarm that rings next, taking its weekdays into account. Attributes: `next_alarm_at` (date and time), `next_alarm_days`, `alarm_count`, `enabled_count` |
+| `sensor.<name>_tracking_mode` | Sensor | Current tracking mode reported by the watch: `NORMAL`, `SCHOOLWAY` or `EXPLORER` |
 
 ### Binary Sensors
 
@@ -96,13 +100,13 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 | `binary_sensor.<name>_online` | Binary Sensor | Whether watch is currently online |
 | `binary_sensor.<name>_school_way` | Binary Sensor | On while one of the school way times set in the ANIO app is running (the watch then locates every minute). Attribute `periods`: start, end, days |
 | `binary_sensor.<name>_silence_active` | Binary Sensor | "Silence Time Active": on while one of the enabled silence times is running, so the watch is silent. Attribute `periods`: start, end, days |
-| `binary_sensor.<name>_at_<geofence>` | Binary Sensor | One per geofence set up in the ANIO app; on while the watch's last position is inside. Attributes: radius, ANIO's monitoring window (`active_from`/`active_until`) |
+| `binary_sensor.<name>_at_<geofence>` | Binary Sensor | One per geofence set up in the ANIO app; on while the watch's last position is inside. Attributes: radius, ANIO's monitoring window (`active_from`/`active_until`, local time), `enabled_in_anio` |
 
 ### Device Tracker
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `device_tracker.<name>_location` | Device Tracker | GPS location for map display |
+| `device_tracker.<name>_location` | Device Tracker | Location for map display. Attribute `location_source`: `GPS` or `WIFI` |
 
 ### Buttons
 
@@ -406,7 +410,9 @@ texts are removed.
 
 The ANIO API has rate limits. If you receive rate limit errors:
 - Increase the scan interval in the integration options
-- Avoid pressing the Ring button too frequently
+- Avoid pressing the Ring button too frequently; Locate Now can be pressed once a minute
+- If ANIO asks for a longer pause, the integration sends no requests until then and
+  continues on its own
 
 ## Privacy & Security
 
@@ -415,6 +421,7 @@ The ANIO API has rate limits. If you receive rate limit errors:
 - No data is sent to third parties
 - Message texts and locations are not written to the Home Assistant log
 - The integration only accesses data for watches linked to your account
+- It has no function to listen in through the watch's microphone or to use a camera
 
 ## Contributing
 
