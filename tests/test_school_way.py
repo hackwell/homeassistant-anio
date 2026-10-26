@@ -218,3 +218,21 @@ def test_sensor_updates_every_minute(mock_coordinator_data: dict) -> None:
 
     write_state.assert_called_once()
     sensor.coordinator.async_request_refresh.assert_not_called()
+
+
+def test_minute_tick_writes_only_on_change(mock_coordinator_data: dict) -> None:
+    """Test the state is written when a window starts or ends, not every minute."""
+    sensor = _sensor(mock_coordinator_data)
+    now = "custom_components.anio.binary_sensor.dt_util.now"
+
+    with patch.object(sensor, "async_write_ha_state") as write_state:
+        for minute, (hour, mins) in enumerate(
+            [(7, 33), (7, 34), (7, 35), (7, 36), (8, 5)]
+        ):
+            with patch(now, return_value=_at(MONDAY, hour, mins)):
+                sensor._handle_minute(_at(MONDAY, hour, mins))
+            if minute == 0:
+                write_state.reset_mock()
+
+    # 07:34 off (unchanged), 07:35 on, 07:36 on (unchanged), 08:05 off
+    assert write_state.call_count == 2

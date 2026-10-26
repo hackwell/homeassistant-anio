@@ -406,6 +406,28 @@ texts are removed.
 - The Ring button only makes the watch ring; it does not locate it
 - Check if "Locating" is enabled in the watch settings via the ANIO app
 
+### Raspberry Pi with an SD Card
+
+The integration keeps writes to the disk low: it stores nothing of its own, saves
+the login only when ANIO issues a new refresh token, and keeps settings-like
+attributes (geofence center and radius, school way and silence times, alarm
+counts) out of the recorder database. Sensors only cause a write when their value
+changes.
+
+Two sensors change with almost every update: **Last Seen** (the watch reports
+about every 5 minutes) and **Signal Strength**. If you don't need their history,
+exclude them from the recorder:
+
+```yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.*_last_seen
+      - sensor.*_signal_strength
+```
+
+With German entity IDs use `sensor.*_zuletzt_gesehen` and `sensor.*_signalstarke`.
+
 ### Rate Limiting
 
 The ANIO API has rate limits. If you receive rate limit errors:
