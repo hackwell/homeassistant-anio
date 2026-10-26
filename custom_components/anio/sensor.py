@@ -213,6 +213,11 @@ class AnioNextAlarmSensor(AnioEntity, SensorEntity):
 
     _attr_translation_key = "next_alarm"
 
+    # Settings, not history; not stored in the recorder database
+    _unrecorded_attributes = frozenset(
+        {"alarm_count", "enabled_count", "next_alarm_days"}
+    )
+
     _attr_icon = "mdi:alarm"
 
     def __init__(

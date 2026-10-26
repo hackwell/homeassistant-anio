@@ -73,7 +73,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
 
     async def _on_token_refresh(access_token: str, refresh_token: str) -> None:
-        """Persist refreshed tokens to the config entry."""
+        """Persist a new refresh token to the config entry.
+
+        The access token is renewed about every 10 minutes and can always be
+        renewed again with the refresh token, e.g. after a restart. Saving it
+        each time would rewrite core.config_entries (all integrations) every
+        10 minutes, which wears out SD cards. So save only a changed refresh
+        token, together with the current access token.
+        """
+        if refresh_token == entry.data.get(CONF_REFRESH_TOKEN):
+            return
         hass.config_entries.async_update_entry(
             entry,
             data={

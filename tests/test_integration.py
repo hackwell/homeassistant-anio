@@ -484,6 +484,11 @@ class TestSetupWiresCallback:
         assert updated_data[CONF_ACCESS_TOKEN] == "new_access"
         assert updated_data[CONF_REFRESH_TOKEN] == "new_refresh"
 
+        # Only a new access token: nothing is written (SD card wear)
+        hass.config_entries.async_update_entry.reset_mock()
+        await captured_callback("newer_access", TEST_REFRESH_TOKEN)
+        hass.config_entries.async_update_entry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # 8. Expired Token → Refresh → Successful API Call

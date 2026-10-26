@@ -94,6 +94,9 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
 class AnioTimeWindowSensor(AnioEntity, BinarySensorEntity):
     """On while one of the watch's weekly time windows is running."""
 
+    # Static settings; not stored in the recorder database
+    _unrecorded_attributes = frozenset({"periods"})
+
     def __init__(
         self,
         coordinator: AnioDataUpdateCoordinator,
@@ -102,6 +105,7 @@ class AnioTimeWindowSensor(AnioEntity, BinarySensorEntity):
         """Initialize the time window sensor."""
         super().__init__(coordinator, device_id)
         self._attr_unique_id = f"{device_id}_{self.translation_key}"
+        self._last_is_on: bool | None = None
 
     def _windows(self, device_state: AnioDeviceState) -> Sequence[TimeWindow]:
         """Return the time windows this sensor watches."""
@@ -110,14 +114,24 @@ class AnioTimeWindowSensor(AnioEntity, BinarySensorEntity):
     async def async_added_to_hass(self) -> None:
         """Re-check the time windows every minute, without API requests."""
         await super().async_added_to_hass()
+        self._last_is_on = self.is_on
         self.async_on_remove(
             async_track_time_change(self.hass, self._handle_minute, second=0)
         )
 
     @callback
+    def _handle_coordinator_update(self) -> None:
+        """Remember the state written with new data."""
+        self._last_is_on = self.is_on
+        super()._handle_coordinator_update()
+
+    @callback
     def _handle_minute(self, _now: datetime) -> None:
-        """Update the state when a minute starts."""
-        self.async_write_ha_state()
+        """Write the state only when a time window starts or ends."""
+        is_on = self.is_on
+        if is_on != self._last_is_on:
+            self._last_is_on = is_on
+            self.async_write_ha_state()
 
     @property
     def is_on(self) -> bool | None:
@@ -177,6 +191,19 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.PRESENCE
     _attr_translation_key = "geofence"
+
+    # The geofence's settings; not stored in the recorder database
+    _unrecorded_attributes = frozenset(
+        {
+            "geofence_name",
+            "latitude",
+            "longitude",
+            "radius_meters",
+            "active_from",
+            "active_until",
+            "enabled_in_anio",
+        }
+    )
 
     def __init__(
         self,

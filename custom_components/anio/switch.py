@@ -133,6 +133,9 @@ class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):
 
     _attr_translation_key = "silence_time"
 
+    # Static settings; not stored in the recorder database
+    _unrecorded_attributes = frozenset({"silence_time_count", "periods"})
+
     _attr_icon = "mdi:volume-off"
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -200,6 +203,8 @@ class AnioTimeEntrySwitch(AnioEntity, SwitchEntity):
     """
 
     _attr_entity_category = EntityCategory.CONFIG
+    # Static settings; not stored in the recorder database
+    _unrecorded_attributes = frozenset({"start", "end", "days"})
 
     def __init__(
         self,
