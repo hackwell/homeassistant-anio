@@ -133,8 +133,8 @@ class TestSwitchSetup:
 
         await async_setup_entry(hass, mock_config_entry, add_entities)
 
-        # Should create 1 switch per device
-        assert len(entities) == 1
+        # Silence times and explorer mode per device
+        assert len(entities) == 2
         assert isinstance(entities[0], AnioSilenceTimeSwitch)
 
     @pytest.mark.asyncio

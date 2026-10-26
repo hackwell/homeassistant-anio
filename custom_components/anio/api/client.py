@@ -277,6 +277,29 @@ class AnioApiClient:
         await self._request("POST", f"/v1/device/{device_id}/find")
         _LOGGER.debug("Ring request sent to device %s", device_id)
 
+    async def locate_device(self, device_id: str) -> None:
+        """Ask the watch for a new position now (ANIO app: "Einmalortung").
+
+        The watch stays silent; the position arrives within about a minute.
+
+        Args:
+            device_id: The device ID.
+        """
+        await self._request("POST", f"/v1/device/{device_id}/cr")
+        _LOGGER.debug("Locate request sent to device %s", device_id)
+
+    async def set_explorer_mode(self, device_id: str, active: bool) -> None:
+        """Start or stop the explorer mode (locating every 5 minutes for 1 h).
+
+        Args:
+            device_id: The device ID.
+            active: True to start, False to stop.
+        """
+        await self._request(
+            "POST", "/v1/explorer", json={"deviceId": device_id, "activate": active}
+        )
+        _LOGGER.debug("Explorer mode %s for device %s", active, device_id)
+
     async def power_off_device(self, device_id: str) -> None:
         """Power off a device.
 
@@ -590,12 +613,22 @@ class AnioApiClient:
             List of school way times, empty on error.
         """
         try:
-            data = await self._request("GET", f"/v1/school-way-time/{device_id}")
+            # The ANIO app uses /v2, which already returns local times
+            data = await self._request("GET", f"/v2/school-way-time/{device_id}")
+            local = True
+        except AnioDeviceNotFoundError:
+            local = False
+        try:
+            if not local:
+                # /v1 times are shifted back by deviceTimezone; see to_local_time
+                data = await self._request("GET", f"/v1/school-way-time/{device_id}")
             if not isinstance(data, list):
                 return []
 
             result = []
             for item in data:
+                if local and isinstance(item, dict):
+                    item = {k: v for k, v in item.items() if k != "deviceTimezone"}
                 try:
                     result.append(SchoolWayTime.model_validate(item))
                 except Exception as err:  # noqa: BLE001

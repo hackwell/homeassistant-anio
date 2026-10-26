@@ -88,6 +88,9 @@
       }
     },
     "button": {
+      "locate_now": {
+        "name": "Jetzt orten"
+      },
       "ring": {
         "name": "Klingeln lassen"
       },
@@ -106,6 +109,9 @@
     "switch": {
       "silence_time": {
         "name": "Ruhezeiten"
+      },
+      "explorer_mode": {
+        "name": "Explorer-Modus"
       }
     },
     "select": {
@@ -160,6 +166,9 @@
     },
     "api_error": {
       "message": "Fehler bei der Kommunikation mit ANIO: {error}"
+    },
+    "locate_cooldown": {
+      "message": "Die Uhr wird gerade schon geortet. Bitte warte noch {seconds} Sekunden."
     }
   }
 }

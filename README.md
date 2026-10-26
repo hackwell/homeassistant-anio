@@ -108,6 +108,7 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 
 | Entity | Type | Description |
 |--------|------|-------------|
+| `button.<name>_locate_now` | Button | **Locate Now** ("Jetzt orten", "Einmalortung" in the ANIO app): the watch locates silently, the new position arrives within about a minute and Home Assistant fetches it after 70 seconds. Can be pressed once a minute |
 | `button.<name>_locate` | Button | **Ring**: the watch rings and vibrates loudly ("Uhr finden" in the ANIO app). It does **not** request a new location |
 | `button.<name>_power_off` | Button | Remotely power off the watch |
 | `button.<name>_flower` | Button | Send a "flower" (reward heart) to the watch. Only works on watches with reward hearts; the ANIO 6 has none, so there the button is disabled by default and has no effect ([#5](https://github.com/hackwell/homeassistant-anio/issues/5)) |
@@ -116,6 +117,7 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 
 | Entity | Type | Description |
 |--------|------|-------------|
+| `switch.<name>_explorer_mode` | Switch | **Explorer Mode**: the watch locates every 5 minutes for an hour, then switches back on its own. Uses noticeably more battery. On while the tracking mode is `EXPLORER` |
 | `switch.<name>_silence_time` | Switch | "Silence Times": whether the silence times configured in the ANIO app apply at all (on/off for all of them). It does not mean the watch is silent right now |
 
 ### Select
@@ -344,9 +346,9 @@ texts are removed.
 
 - The ANIO 6 reports its location every 60 minutes by default to save battery,
   so the position in Home Assistant can be up to an hour old
-- For a fresh position, use "Einmalortung" (within about 60 seconds) or the
-  explorer mode (every 5 minutes for an hour) in the ANIO app; school way times
-  locate every minute. Opening the ANIO app also triggers a location update
+- For a fresh position, press **Locate Now** (within about 60 seconds) or turn
+  on **Explorer Mode** (every 5 minutes for an hour); school way times locate
+  every minute. Opening the ANIO app also triggers a location update
 - The Ring button only makes the watch ring; it does not locate it
 - Check if "Locating" is enabled in the watch settings via the ANIO app
 
