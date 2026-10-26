@@ -88,6 +88,9 @@
       }
     },
     "button": {
+      "locate_now": {
+        "name": "Locate Now"
+      },
       "ring": {
         "name": "Ring"
       },
@@ -106,6 +109,9 @@
     "switch": {
       "silence_time": {
         "name": "Silence Times"
+      },
+      "explorer_mode": {
+        "name": "Explorer Mode"
       }
     },
     "select": {
@@ -160,6 +166,9 @@
     },
     "api_error": {
       "message": "Error communicating with ANIO: {error}"
+    },
+    "locate_cooldown": {
+      "message": "The watch is already being located. Please wait {seconds} more seconds."
     }
   }
 }

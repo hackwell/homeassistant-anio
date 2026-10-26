@@ -34,8 +34,52 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        lambda device_id: [AnioSilenceTimeSwitch(coordinator, client, device_id)],
+        lambda device_id: [
+            AnioSilenceTimeSwitch(coordinator, client, device_id),
+            AnioExplorerModeSwitch(coordinator, client, device_id),
+        ],
     )
+
+
+class AnioExplorerModeSwitch(AnioEntity, SwitchEntity):
+    """Explorer mode: the watch locates every 5 minutes for an hour.
+
+    There is no API to read the explorer mode itself; it shows up as
+    tracking mode EXPLORER, which ends on its own after an hour.
+    """
+
+    _attr_translation_key = "explorer_mode"
+
+    _attr_icon = "mdi:compass-outline"
+
+    def __init__(
+        self,
+        coordinator: AnioDataUpdateCoordinator,
+        client: AnioApiClient,
+        device_id: str,
+    ) -> None:
+        """Initialize the explorer mode switch."""
+        super().__init__(coordinator, device_id)
+        self._client = client
+        self._attr_unique_id = f"{device_id}_explorer_mode"
+
+    @property
+    def is_on(self) -> bool:
+        """Return True while the watch is in explorer mode."""
+        device_state = self.coordinator.data.get(self._device_id)
+        return bool(device_state and device_state.tracking_mode == "EXPLORER")
+
+    async def async_turn_on(self, **kwargs: Any) -> None:  # noqa: ARG002
+        """Start the explorer mode."""
+        with translate_api_errors():
+            await self._client.set_explorer_mode(self._device_id, True)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:  # noqa: ARG002
+        """Stop the explorer mode."""
+        with translate_api_errors():
+            await self._client.set_explorer_mode(self._device_id, False)
+        await self.coordinator.async_request_refresh()
 
 
 class AnioSilenceTimeSwitch(AnioEntity, SwitchEntity):

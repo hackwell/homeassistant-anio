@@ -47,9 +47,11 @@ For each watch, the integration creates:
 | Silence Time Active | Binary Sensor | On while a silence time is running |
 | At [Geofence] | Binary Sensor | One per geofence, shows presence |
 | Location | Device Tracker | Watch location for map display |
+| Locate Now | Button | Ask the watch for its position now (arrives within about a minute) |
 | Ring | Button | Make the watch ring and vibrate (does not locate it) |
 | Power Off | Button | Remotely power off the watch |
 | Flower | Button | Send a reward heart (only on watches with hearts, not the ANIO 6) |
+| Explorer Mode | Switch | Locate every 5 minutes for an hour (uses more battery) |
 | Silence Times | Switch | Whether the silence times apply at all |
 | Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |

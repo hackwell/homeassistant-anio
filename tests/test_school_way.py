@@ -109,20 +109,45 @@ def test_window_past_midnight() -> None:
     assert not night.is_active(_at(MONDAY, 0, 30))
 
 
-@pytest.mark.asyncio
-async def test_client_reads_school_way_times() -> None:
-    """Test the client requests and parses the school way times."""
-    response = MagicMock()
-    response.status = 200
-    response.json = AsyncMock(return_value=[API_ITEM, {"broken": True}])
-    response.__aenter__ = AsyncMock(return_value=response)
-    response.__aexit__ = AsyncMock(return_value=None)
+def _client(*responses: tuple[int, object]) -> tuple[AnioApiClient, MagicMock]:
+    """Create a client whose requests return the given (status, JSON)."""
+    mocks = []
+    for status, body in responses:
+        response = MagicMock()
+        response.status = status
+        response.json = AsyncMock(return_value=body)
+        response.text = AsyncMock(return_value="")
+        response.__aenter__ = AsyncMock(return_value=response)
+        response.__aexit__ = AsyncMock(return_value=None)
+        mocks.append(response)
     session = MagicMock()
-    session.request.return_value = response
+    session.request.side_effect = mocks
     auth = AsyncMock(spec=AnioAuth)
     auth.ensure_valid_token = AsyncMock(return_value="test_token")
     auth.app_uuid = "test-uuid"
-    client = AnioApiClient(session=session, auth=auth)
+    return AnioApiClient(session=session, auth=auth), session
+
+
+@pytest.mark.asyncio
+async def test_client_reads_v2_local_times() -> None:
+    """Test /v2 is used; its times are already local and not shifted again."""
+    v2_item = {**API_ITEM, "startTime": "07:35", "endTime": "08:05"}
+    client, session = _client((200, [v2_item, {"broken": True}]))
+
+    school_ways = await client.get_school_way_times(TEST_DEVICE_ID)
+
+    assert [(sw.local_start_time, sw.local_end_time) for sw in school_ways] == [
+        ("07:35", "08:05")
+    ]
+    assert session.request.call_args.args[1].endswith(
+        f"/v2/school-way-time/{TEST_DEVICE_ID}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_client_falls_back_to_v1() -> None:
+    """Test /v1 (shifted by deviceTimezone) is used if /v2 is missing."""
+    client, session = _client((404, {}), (200, [API_ITEM]))
 
     school_ways = await client.get_school_way_times(TEST_DEVICE_ID)
 

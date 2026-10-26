@@ -180,8 +180,8 @@ class TestButtonSetup:
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-        # Should create locate, power_off, and flower buttons per device
-        assert len(entities) == 3
+        # Locate now, ring, power off and flower per device
+        assert len(entities) == 4
         assert any(isinstance(e, AnioRingButton) for e in entities)
         assert any(isinstance(e, AnioPowerOffButton) for e in entities)
         assert any(isinstance(e, AnioFlowerButton) for e in entities)
@@ -248,8 +248,8 @@ class TestButtonSetup:
 
         await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-        # 3 buttons per device (locate + power_off + flower)
-        assert len(entities) == 6
+        # 4 buttons per device
+        assert len(entities) == 8
 
 
 class TestAnioFlowerButton:
