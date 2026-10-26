@@ -374,6 +374,7 @@ class TestFullDataFlow:
         mock_client.get_geofences = AsyncMock(return_value=[geofence])
         mock_client.get_activity = AsyncMock(return_value=[])
         mock_client.get_last_location = AsyncMock(return_value=last_location)
+        mock_client.get_last_locations = AsyncMock(return_value={})
         mock_client.get_chat_history = AsyncMock(return_value=[])
         mock_client.get_alarms = AsyncMock(return_value=[])
         mock_client.get_silence_times = AsyncMock(return_value=[])

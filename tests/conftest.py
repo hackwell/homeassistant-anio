@@ -240,6 +240,7 @@ def mock_api_client(
     client.get_activity = AsyncMock(return_value=[])
     client.get_device_locations = AsyncMock(return_value=[])
     client.get_last_location = AsyncMock(return_value=None)
+    client.get_last_locations = AsyncMock(return_value={})
     client.send_flower = AsyncMock()
     client.get_chat_history = AsyncMock(return_value=[])
     client.find_device = AsyncMock()

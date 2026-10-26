@@ -474,6 +474,30 @@ class AnioApiClient:
             _LOGGER.debug("No last location for device %s (404)", device_id)
             return None
 
+    async def get_last_locations(self) -> dict[str, DeviceLocation] | None:
+        """Get the most recent location of all watches in one request.
+
+        Returns:
+            Locations by device ID, or None if the request isn't available.
+        """
+        try:
+            data = await self._request("GET", "/v1/location/last")
+        except AnioDeviceNotFoundError:
+            _LOGGER.debug("No combined last location (404)")
+            return None
+        if not isinstance(data, list):
+            return None
+
+        result: dict[str, DeviceLocation] = {}
+        for item in data:
+            try:
+                location = DeviceLocation.model_validate(item)
+            except ValidationError as err:
+                self._warn_unreadable("Ignoring a location the integration can't read", err)
+                continue
+            result[location.device_id] = location
+        return result
+
     async def send_flower(self, device_id: str, amount: int = 1) -> None:
         """Send a flower (praise) to a device.
 
