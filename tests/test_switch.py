@@ -133,8 +133,9 @@ class TestSwitchSetup:
 
         await async_setup_entry(hass, mock_config_entry, add_entities)
 
-        # Silence times and explorer mode per device
-        assert len(entities) == 2
+        # Silence times and explorer mode per device, plus one switch per
+        # silence time and geofence of the test watch
+        assert len(entities) == 4
         assert isinstance(entities[0], AnioSilenceTimeSwitch)
 
     @pytest.mark.asyncio

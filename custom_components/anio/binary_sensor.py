@@ -187,34 +187,6 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
         """Initialize the geofence sensor."""
         super().__init__(coordinator, device_id, geofence)
         self._attr_unique_id = f"{device_id}_geofence_{geofence.id}"
-        self._attr_translation_placeholders = {"geofence_name": geofence.name}
-
-    @property
-    def _current_geofence(self) -> Geofence:
-        """Return the geofence as of the last update (e.g. after a rename)."""
-        device_state = self.device_state
-        if device_state:
-            for geofence in device_state.geofences:
-                if geofence.id == self._geofence.id:
-                    return geofence
-        return self._geofence
-
-    @property
-    def available(self) -> bool:
-        """Return False once the geofence was deleted in the ANIO app."""
-        device_state = self.device_state
-        return super().available and any(
-            geofence.id == self._geofence.id
-            for geofence in (device_state.geofences if device_state else [])
-        )
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Keep the geofence name current, e.g. after a rename in the app."""
-        self._attr_translation_placeholders = {
-            "geofence_name": self._current_geofence.name
-        }
-        super()._handle_coordinator_update()
 
     @property
     def is_on(self) -> bool | None:

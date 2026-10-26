@@ -53,6 +53,8 @@ For each watch, the integration creates:
 | Flower | Button | Send a reward heart (only on watches with hearts, not the ANIO 6) |
 | Explorer Mode | Switch | Locate every 5 minutes for an hour (uses more battery) |
 | Silence Times | Switch | Whether the silence times apply at all |
+| School way / Silence time … | Switch | One per entry, e.g. to pause them during school holidays |
+| Monitor … | Switch | Whether ANIO monitors a geofence |
 | Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |
 

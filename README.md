@@ -118,6 +118,9 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 | Entity | Type | Description |
 |--------|------|-------------|
 | `switch.<name>_explorer_mode` | Switch | **Explorer Mode**: the watch locates every 5 minutes for an hour, then switches back on its own. Uses noticeably more battery. On while the tracking mode is `EXPLORER` |
+| `switch.<name>_school_way_<period>` | Switch | One per school way time, named after its times and days (e.g. "School way 07:35–08:05 Mon–Fri"). Turns this school way time on or off, e.g. during the school holidays; times and days stay as set in the app. New and deleted entries are picked up automatically |
+| `switch.<name>_silence_time_<period>` | Switch | The same for each silence time ("Silence time 08:00–16:00 Mon–Thu") |
+| `switch.<name>_monitor_<geofence>` | Switch | Whether ANIO monitors a geofence and sends its alerts ("enabled" in the app). The "At …" sensor shows presence either way |
 | `switch.<name>_silence_time` | Switch | "Silence Times": whether the silence times configured in the ANIO app apply at all (on/off for all of them). It does not mean the watch is silent right now |
 
 ### Select
@@ -289,6 +292,32 @@ automation:
         data:
           title: "Watch Offline"
           message: "Kids watch has been offline for 10 minutes"
+```
+
+### School Holidays: Pause School Way and Silence Times
+
+Uses a holiday calendar (e.g. from the [Holiday](https://www.home-assistant.io/integrations/holiday/)
+integration or an ICS calendar with your state's school holidays). Entity IDs depend on
+your times and language; look them up on the watch's device page.
+
+```yaml
+automation:
+  - alias: "Watch: school holidays"
+    trigger:
+      - platform: calendar
+        event: start
+        entity_id: calendar.school_holidays
+        id: holidays
+      - platform: calendar
+        event: end
+        entity_id: calendar.school_holidays
+        id: school
+    action:
+      - service: "switch.turn_{{ 'off' if trigger.id == 'holidays' else 'on' }}"
+        target:
+          entity_id:
+            - switch.kids_watch_school_way_07_35_08_05_mon_fri
+            - switch.kids_watch_silence_time_08_00_16_00_mon_thu
 ```
 
 ### Geofence Arrival Notification
