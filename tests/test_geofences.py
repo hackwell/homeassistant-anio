@@ -25,11 +25,12 @@ API_GEOFENCE = {
     "icon": "house",
     "location": [52.5200, 13.4050],
     "radiusInKm": 0.3,
-    "startTime": "07:00",
-    "endTime": "18:00",
+    # Shifted back by deviceTimezone: the app shows 00:00 to 23:59
+    "startTime": "23:00",
+    "endTime": "22:59",
     "isEnabled": True,
     "deviceId": TEST_DEVICE_ID,
-    "deviceTimezone": "+02:00",
+    "deviceTimezone": "+01:00",
 }
 
 
@@ -49,8 +50,12 @@ class TestGeofenceModel:
         assert geofence.latitude == 52.5200
         assert geofence.longitude == 13.4050
         assert geofence.radius == 300
-        assert geofence.start_time == "07:00"
-        assert geofence.end_time == "18:00"
+        assert geofence.start_time == "23:00"
+        assert geofence.end_time == "22:59"
+        assert (geofence.local_start_time, geofence.local_end_time) == (
+            "00:00",
+            "23:59",
+        )
         assert geofence.is_enabled is True
 
     @pytest.mark.parametrize(
@@ -79,15 +84,13 @@ class TestGeofenceSensor:
             )
         }
         # Use the real calculation of the coordinator
-        coordinator.is_device_in_geofence = (
-            lambda device_id, geofence_id: AnioDataUpdateCoordinator.is_device_in_geofence(
+        coordinator.is_device_in_geofence = lambda device_id, geofence_id: (
+            AnioDataUpdateCoordinator.is_device_in_geofence(
                 coordinator, device_id, geofence_id
             )
         )
-        coordinator._is_inside_geofence = (
-            lambda *args: AnioDataUpdateCoordinator._is_inside_geofence(
-                coordinator, *args
-            )
+        coordinator._is_inside_geofence = lambda *args: (
+            AnioDataUpdateCoordinator._is_inside_geofence(coordinator, *args)
         )
         return AnioGeofenceSensor(coordinator, TEST_DEVICE_ID, geofences[0])
 
@@ -102,15 +105,15 @@ class TestGeofenceSensor:
         assert self._sensor(mock_device, [geofence], far).is_on is False
 
     def test_attributes_include_time_window(self, mock_device: Device) -> None:
-        """Test radius in meters and ANIO's monitoring window are exposed."""
+        """Test radius in meters and ANIO's monitoring window (local time)."""
         geofence = Geofence.model_validate(API_GEOFENCE)
         sensor = self._sensor(mock_device, [geofence], None)
 
         attrs = sensor.extra_state_attributes
         assert attrs is not None
         assert attrs["radius_meters"] == 300
-        assert attrs["active_from"] == "07:00"
-        assert attrs["active_until"] == "18:00"
+        assert attrs["active_from"] == "00:00"
+        assert attrs["active_until"] == "23:59"
         assert attrs["enabled_in_anio"] is True
 
     def test_name_follows_rename(self, mock_device: Device) -> None:

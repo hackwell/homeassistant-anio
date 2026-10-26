@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, time, timedelta
 from typing import Literal
 
@@ -104,6 +105,35 @@ class ChatMessage(BaseModel):
     created_at: datetime = Field(alias="createdAt")
 
 
+def to_local_time(value: str, offset: str | None) -> str:
+    """Shift an API time by the device's offset to the watch's local time.
+
+    School way times and geofences carry ``deviceTimezone`` (e.g. "+01:00")
+    and store their times shifted back by it: the app shows 07:35 for
+    "06:35". Silence times have no offset and are already local.
+
+    Args:
+        value: Time as "HH:MM".
+        offset: The deviceTimezone value, or None.
+
+    Returns:
+        The local time as "HH:MM", or the value unchanged if either part
+        is missing or unreadable.
+    """
+    match = re.fullmatch(r"([+-])(\d{2}):(\d{2})", offset or "")
+    if not match:
+        return value
+    try:
+        parsed = time.fromisoformat(value)
+    except ValueError:
+        return value
+    shift = int(match[2]) * 60 + int(match[3])
+    if match[1] == "-":
+        shift = -shift
+    minutes = (parsed.hour * 60 + parsed.minute + shift) % (24 * 60)
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
 class Geofence(BaseModel):
     """Geofence from GET /v1/geofence/{deviceId}."""
 
@@ -119,6 +149,21 @@ class Geofence(BaseModel):
     end_time: str | None = Field(default=None, alias="endTime")
     is_enabled: bool = Field(default=True, alias="isEnabled")
     device_id: str = Field(default="", alias="deviceId")
+    device_timezone: str | None = Field(default=None, alias="deviceTimezone")
+
+    @property
+    def local_start_time(self) -> str | None:
+        """Get the start of the monitoring window in local time."""
+        if self.start_time is None:
+            return None
+        return to_local_time(self.start_time, self.device_timezone)
+
+    @property
+    def local_end_time(self) -> str | None:
+        """Get the end of the monitoring window in local time."""
+        if self.end_time is None:
+            return None
+        return to_local_time(self.end_time, self.device_timezone)
 
     @field_validator("location")
     @classmethod
@@ -270,12 +315,24 @@ class TimeWindow(BaseModel):
     end_time: str = Field(default="00:00", alias="endTime")
     days: list[str] = Field(default_factory=list)
     enabled: bool = Field(default=True, alias="isEnabled")
+    # Only school way times have it; see to_local_time
+    device_timezone: str | None = Field(default=None, alias="deviceTimezone")
 
     @field_validator("days", mode="before")
     @classmethod
     def validate_days(cls, v: object) -> list[str]:
         """Accept the API's weekday bitstring."""
         return parse_weekdays(v)
+
+    @property
+    def local_start_time(self) -> str:
+        """Get the start in the watch's local time."""
+        return to_local_time(self.start_time, self.device_timezone)
+
+    @property
+    def local_end_time(self) -> str:
+        """Get the end in the watch's local time."""
+        return to_local_time(self.end_time, self.device_timezone)
 
     def is_active(self, now: datetime) -> bool:
         """Return True if the window is running at the given local time.
@@ -289,8 +346,8 @@ class TimeWindow(BaseModel):
         if not self.enabled:
             return False
         try:
-            start = time.fromisoformat(self.start_time)
-            end = time.fromisoformat(self.end_time)
+            start = time.fromisoformat(self.local_start_time)
+            end = time.fromisoformat(self.local_end_time)
         except ValueError:
             return False
 

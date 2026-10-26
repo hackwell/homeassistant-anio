@@ -135,8 +135,8 @@ class AnioSchoolWaySensor(AnioEntity, BinarySensorEntity):
         return {
             "periods": [
                 {
-                    "start": sw.start_time,
-                    "end": sw.end_time,
+                    "start": sw.local_start_time,
+                    "end": sw.local_end_time,
                     "days": ", ".join(sw.days),
                     "enabled": sw.enabled,
                 }
@@ -207,7 +207,7 @@ class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):
             "radius_meters": geofence.radius,
             # ANIO only monitors the geofence in this window; the sensor
             # always shows whether the watch is inside.
-            "active_from": geofence.start_time,
-            "active_until": geofence.end_time,
+            "active_from": geofence.local_start_time,
+            "active_until": geofence.local_end_time,
             "enabled_in_anio": geofence.is_enabled,
         }

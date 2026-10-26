@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from custom_components.anio.api import AnioApiClient, AnioAuth, SchoolWayTime
+from custom_components.anio.api.models import to_local_time
 from custom_components.anio.binary_sensor import AnioSchoolWaySensor
 
 from .conftest import TEST_DEVICE_ID
@@ -18,11 +19,12 @@ API_ITEM = {
     "days": "0111100",
     "deviceId": TEST_DEVICE_ID,
     "isEnabled": True,
-    "startTime": "07:15",
-    "endTime": "07:45",
+    # Shifted back by deviceTimezone: the app shows 07:35 to 08:05
+    "startTime": "06:35",
+    "endTime": "07:05",
     "createdAt": "2026-09-01T10:00:00.000Z",
     "updatedAt": "2026-09-01T10:00:00.000Z",
-    "deviceTimezone": "+02:00",
+    "deviceTimezone": "+01:00",
 }
 # 2026-10-26 is a Monday, 2026-10-30 a Friday
 MONDAY = datetime(2026, 10, 26, tzinfo=UTC)
@@ -35,27 +37,48 @@ def _at(day: datetime, hour: int, minute: int) -> datetime:
 
 
 def test_parse_api_item() -> None:
-    """Test the API's format is read."""
+    """Test the API's format is read and converted to local time."""
     school_way = SchoolWayTime.model_validate(API_ITEM)
 
     assert school_way.days == ["MON", "TUE", "WED", "THU"]
     assert school_way.enabled is True
-    assert (school_way.start_time, school_way.end_time) == ("07:15", "07:45")
+    assert (school_way.start_time, school_way.end_time) == ("06:35", "07:05")
+    assert (school_way.local_start_time, school_way.local_end_time) == (
+        "07:35",
+        "08:05",
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "offset", "expected"),
+    [
+        ("06:35", "+01:00", "07:35"),
+        ("23:00", "+01:00", "00:00"),
+        ("00:30", "-02:00", "22:30"),
+        ("06:35", "+05:30", "12:05"),
+        ("06:35", None, "06:35"),
+        ("06:35", "Europe/Berlin", "06:35"),
+        ("soon", "+01:00", "soon"),
+    ],
+)
+def test_to_local_time(value: str, offset: str | None, expected: str) -> None:
+    """Test API times are shifted by deviceTimezone."""
+    assert to_local_time(value, offset) == expected
 
 
 @pytest.mark.parametrize(
     ("now", "expected"),
     [
-        (_at(MONDAY, 7, 15), True),
-        (_at(MONDAY, 7, 44), True),
-        (_at(MONDAY, 7, 45), False),
-        (_at(MONDAY, 7, 0), False),
-        (_at(FRIDAY, 7, 30), False),
+        (_at(MONDAY, 7, 35), True),
+        (_at(MONDAY, 8, 4), True),
+        (_at(MONDAY, 8, 5), False),
+        (_at(MONDAY, 6, 50), False),
+        (_at(FRIDAY, 7, 50), False),
     ],
-    ids=["start", "inside", "end", "before", "friday"],
+    ids=["start", "inside", "end", "api_time_is_not_local", "friday"],
 )
 def test_is_active(now: datetime, expected: bool) -> None:
-    """Test the window covers its days and times only."""
+    """Test the window covers its days and local times only."""
     assert SchoolWayTime.model_validate(API_ITEM).is_active(now) is expected
 
 
@@ -64,14 +87,20 @@ def test_disabled_or_unreadable_is_never_active() -> None:
     disabled = SchoolWayTime.model_validate({**API_ITEM, "isEnabled": False})
     unreadable = SchoolWayTime.model_validate({**API_ITEM, "startTime": "soon"})
 
-    assert not disabled.is_active(_at(MONDAY, 7, 30))
-    assert not unreadable.is_active(_at(MONDAY, 7, 30))
+    assert not disabled.is_active(_at(MONDAY, 7, 50))
+    assert not unreadable.is_active(_at(MONDAY, 7, 50))
 
 
 def test_window_past_midnight() -> None:
     """Test a window ending after midnight belongs to its start day."""
     night = SchoolWayTime.model_validate(
-        {**API_ITEM, "days": "0100000", "startTime": "23:00", "endTime": "01:00"}
+        {
+            **API_ITEM,
+            "days": "0100000",
+            "startTime": "23:00",
+            "endTime": "01:00",
+            "deviceTimezone": None,
+        }
     )
 
     assert night.is_active(_at(MONDAY, 23, 30))
@@ -97,7 +126,7 @@ async def test_client_reads_school_way_times() -> None:
 
     school_ways = await client.get_school_way_times(TEST_DEVICE_ID)
 
-    assert [sw.start_time for sw in school_ways] == ["07:15"]
+    assert [sw.local_start_time for sw in school_ways] == ["07:35"]
     assert session.request.call_args.args[1].endswith(
         f"/v1/school-way-time/{TEST_DEVICE_ID}"
     )
@@ -115,7 +144,7 @@ def _sensor(mock_coordinator_data: dict) -> AnioSchoolWaySensor:
 
 @pytest.mark.parametrize(
     ("now", "expected"),
-    [(_at(MONDAY, 7, 30), True), (_at(MONDAY, 12, 0), False)],
+    [(_at(MONDAY, 7, 50), True), (_at(MONDAY, 12, 0), False)],
     ids=["on_the_way", "at_school"],
 )
 def test_sensor_state(
@@ -129,15 +158,15 @@ def test_sensor_state(
 
 
 def test_sensor_attributes(mock_coordinator_data: dict) -> None:
-    """Test the school way times are listed."""
+    """Test the school way times are listed in local time, like in the app."""
     sensor = _sensor(mock_coordinator_data)
 
     assert sensor.unique_id == f"{TEST_DEVICE_ID}_school_way"
     assert sensor.extra_state_attributes == {
         "periods": [
             {
-                "start": "07:15",
-                "end": "07:45",
+                "start": "07:35",
+                "end": "08:05",
                 "days": "MON, TUE, WED, THU",
                 "enabled": True,
             }
@@ -160,7 +189,7 @@ def test_sensor_updates_every_minute(mock_coordinator_data: dict) -> None:
     sensor = _sensor(mock_coordinator_data)
 
     with patch.object(sensor, "async_write_ha_state") as write_state:
-        sensor._handle_minute(_at(MONDAY, 7, 15))
+        sensor._handle_minute(_at(MONDAY, 7, 35))
 
     write_state.assert_called_once()
     sensor.coordinator.async_request_refresh.assert_not_called()
