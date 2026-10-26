@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
@@ -16,7 +17,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
-from .api import Geofence
+from .api import AnioDeviceState, Geofence
+from .api.models import TimeWindow
 from .const import DOMAIN
 from .coordinator import AnioDataUpdateCoordinator
 from .entity import AnioEntity, AnioGeofenceEntity, async_setup_device_entities
@@ -32,7 +34,7 @@ async def async_setup_entry(
         "coordinator"
     ]
 
-    # Online status and school way sensor for each watch
+    # Online status, school way and silence time sensors for each watch
     async_setup_device_entities(
         entry,
         coordinator,
@@ -40,6 +42,7 @@ async def async_setup_entry(
         lambda device_id: [
             AnioOnlineSensor(coordinator, device_id),
             AnioSchoolWaySensor(coordinator, device_id),
+            AnioSilenceActiveSensor(coordinator, device_id),
         ],
     )
 
@@ -88,21 +91,21 @@ class AnioOnlineSensor(AnioEntity, BinarySensorEntity):
         return None
 
 
-class AnioSchoolWaySensor(AnioEntity, BinarySensorEntity):
-    """On while one of the watch's school way times is running."""
-
-    _attr_translation_key = "school_way"
-
-    _attr_icon = "mdi:school"
+class AnioTimeWindowSensor(AnioEntity, BinarySensorEntity):
+    """On while one of the watch's weekly time windows is running."""
 
     def __init__(
         self,
         coordinator: AnioDataUpdateCoordinator,
         device_id: str,
     ) -> None:
-        """Initialize the school way sensor."""
+        """Initialize the time window sensor."""
         super().__init__(coordinator, device_id)
-        self._attr_unique_id = f"{device_id}_school_way"
+        self._attr_unique_id = f"{device_id}_{self.translation_key}"
+
+    def _windows(self, device_state: AnioDeviceState) -> Sequence[TimeWindow]:
+        """Return the time windows this sensor watches."""
+        raise NotImplementedError
 
     async def async_added_to_hass(self) -> None:
         """Re-check the time windows every minute, without API requests."""
@@ -118,16 +121,16 @@ class AnioSchoolWaySensor(AnioEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True while a school way time is running."""
+        """Return True while a time window is running."""
         device_state = self.coordinator.data.get(self._device_id)
         if not device_state:
             return None
         now = dt_util.now()
-        return any(sw.is_active(now) for sw in device_state.school_way_times)
+        return any(window.is_active(now) for window in self._windows(device_state))
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return the school way times."""
+        """Return the time windows in local time."""
         device_state = self.coordinator.data.get(self._device_id)
         if not device_state:
             return None
@@ -135,14 +138,38 @@ class AnioSchoolWaySensor(AnioEntity, BinarySensorEntity):
         return {
             "periods": [
                 {
-                    "start": sw.local_start_time,
-                    "end": sw.local_end_time,
-                    "days": ", ".join(sw.days),
-                    "enabled": sw.enabled,
+                    "start": window.local_start_time,
+                    "end": window.local_end_time,
+                    "days": ", ".join(window.days),
+                    "enabled": window.enabled,
                 }
-                for sw in device_state.school_way_times
+                for window in self._windows(device_state)
             ],
         }
+
+
+class AnioSchoolWaySensor(AnioTimeWindowSensor):
+    """On while one of the watch's school way times is running."""
+
+    _attr_translation_key = "school_way"
+
+    _attr_icon = "mdi:school"
+
+    def _windows(self, device_state: AnioDeviceState) -> Sequence[TimeWindow]:
+        """Return the school way times."""
+        return device_state.school_way_times
+
+
+class AnioSilenceActiveSensor(AnioTimeWindowSensor):
+    """On while a silence time is running, so the watch is silent."""
+
+    _attr_translation_key = "silence_active"
+
+    _attr_icon = "mdi:volume-off"
+
+    def _windows(self, device_state: AnioDeviceState) -> Sequence[TimeWindow]:
+        """Return the silence times."""
+        return device_state.silence_times
 
 
 class AnioGeofenceSensor(AnioGeofenceEntity, BinarySensorEntity):

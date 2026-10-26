@@ -44,12 +44,13 @@ For each watch, the integration creates:
 | Tracking Mode | Sensor | Current tracking mode |
 | Online | Binary Sensor | Whether watch is currently online |
 | School Way | Binary Sensor | On while a school way time is running |
+| Silence Time Active | Binary Sensor | On while a silence time is running |
 | At [Geofence] | Binary Sensor | One per geofence, shows presence |
 | Location | Device Tracker | Watch location for map display |
 | Ring | Button | Make the watch ring and vibrate (does not locate it) |
 | Power Off | Button | Remotely power off the watch |
 | Flower | Button | Send a reward heart (only on watches with hearts, not the ANIO 6) |
-| Silence Time | Switch | Enable or disable the silence times |
+| Silence Times | Switch | Whether the silence times apply at all |
 | Ring Profile | Select | Ring, vibrate or silent |
 | Message | Notify | Send messages to the watch |
 

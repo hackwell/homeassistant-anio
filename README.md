@@ -95,6 +95,7 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 |--------|------|-------------|
 | `binary_sensor.<name>_online` | Binary Sensor | Whether watch is currently online |
 | `binary_sensor.<name>_school_way` | Binary Sensor | On while one of the school way times set in the ANIO app is running (the watch then locates every minute). Attribute `periods`: start, end, days |
+| `binary_sensor.<name>_silence_active` | Binary Sensor | "Silence Time Active": on while one of the enabled silence times is running, so the watch is silent. Attribute `periods`: start, end, days |
 | `binary_sensor.<name>_at_<geofence>` | Binary Sensor | One per geofence set up in the ANIO app; on while the watch's last position is inside. Attributes: radius, ANIO's monitoring window (`active_from`/`active_until`) |
 
 ### Device Tracker
@@ -115,7 +116,7 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `switch.<name>_silence_time` | Switch | Enable or disable all silence times configured in the ANIO app |
+| `switch.<name>_silence_time` | Switch | "Silence Times": whether the silence times configured in the ANIO app apply at all (on/off for all of them). It does not mean the watch is silent right now |
 
 ### Select
 
