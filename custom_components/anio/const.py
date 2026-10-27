@@ -61,7 +61,9 @@ EVENT_MESSAGE_RECEIVED: Final = f"{DOMAIN}_message_received"
 EVENT_ACTIVITY: Final = f"{DOMAIN}_activity"
 
 # Ring profiles
-RING_PROFILES: Final = ["RING_AND_VIBRATE", "VIBRATE_ONLY", "SILENT"]
+# Select options; Home Assistant needs lowercase keys to translate them.
+# The API uses the same names in uppercase.
+RING_PROFILES: Final = ["ring_and_vibrate", "vibrate_only", "silent"]
 
 # Platforms
 PLATFORMS: Final = [

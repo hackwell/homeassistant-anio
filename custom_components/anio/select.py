@@ -61,14 +61,15 @@ class AnioRingProfileSelect(AnioEntity, SelectEntity):
     def current_option(self) -> str | None:
         """Return the current ring profile."""
         device_state = self.coordinator.data.get(self._device_id)
-        if device_state:
-            return device_state.device.settings.ring_profile
-        return None
+        if not device_state:
+            return None
+        option = device_state.device.settings.ring_profile.lower()
+        return option if option in RING_PROFILES else None
 
     async def async_select_option(self, option: str) -> None:
         """Set the ring profile."""
         with translate_api_errors():
             await self._client.update_device_settings(
-                self._device_id, ringProfile=option
+                self._device_id, ringProfile=option.upper()
             )
         await self.coordinator.async_request_refresh()

@@ -127,9 +127,9 @@
       "ring_profile": {
         "name": "Klingelprofil",
         "state": {
-          "RING_AND_VIBRATE": "Klingeln und vibrieren",
-          "VIBRATE_ONLY": "Nur vibrieren",
-          "SILENT": "Lautlos"
+          "ring_and_vibrate": "Klingeln und vibrieren",
+          "vibrate_only": "Nur vibrieren",
+          "silent": "Lautlos"
         }
       }
     }
