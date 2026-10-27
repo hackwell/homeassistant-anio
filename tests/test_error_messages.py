@@ -115,7 +115,7 @@ async def test_select_and_switch_errors_are_translated(
     switch = AnioSilenceTimeSwitch(coordinator, mock_api_client, TEST_DEVICE_ID)
 
     with pytest.raises(HomeAssistantError) as select_error:
-        await select.async_select_option("SILENT")
+        await select.async_select_option("silent")
     with pytest.raises(HomeAssistantError) as switch_error:
         await switch.async_turn_on()
 

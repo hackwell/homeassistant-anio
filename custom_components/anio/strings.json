@@ -127,9 +127,9 @@
       "ring_profile": {
         "name": "Ring Profile",
         "state": {
-          "RING_AND_VIBRATE": "Ring and vibrate",
-          "VIBRATE_ONLY": "Vibrate only",
-          "SILENT": "Silent"
+          "ring_and_vibrate": "Ring and vibrate",
+          "vibrate_only": "Vibrate only",
+          "silent": "Silent"
         }
       }
     }

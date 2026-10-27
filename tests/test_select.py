@@ -59,14 +59,14 @@ class TestAnioRingProfileSelect:
     def test_options(self, ring_select: AnioRingProfileSelect) -> None:
         """Test available options."""
         assert ring_select.options == RING_PROFILES
-        assert "RING_AND_VIBRATE" in ring_select.options
-        assert "VIBRATE_ONLY" in ring_select.options
-        assert "SILENT" in ring_select.options
+        assert "ring_and_vibrate" in ring_select.options
+        assert "vibrate_only" in ring_select.options
+        assert "silent" in ring_select.options
 
     def test_current_option(self, ring_select: AnioRingProfileSelect) -> None:
         """Test current option from coordinator data."""
         # Mock device settings has ringProfile="RING_AND_VIBRATE"
-        assert ring_select.current_option == "RING_AND_VIBRATE"
+        assert ring_select.current_option == "ring_and_vibrate"
 
     def test_current_option_no_data(self, hass: HomeAssistant) -> None:
         """Test current option when no data available."""
@@ -83,7 +83,7 @@ class TestAnioRingProfileSelect:
     @pytest.mark.asyncio
     async def test_select_option(self, ring_select: AnioRingProfileSelect) -> None:
         """Test selecting a ring profile option."""
-        await ring_select.async_select_option("SILENT")
+        await ring_select.async_select_option("silent")
         ring_select._client.update_device_settings.assert_called_once_with(
             TEST_DEVICE_ID, ringProfile="SILENT"
         )
@@ -94,7 +94,7 @@ class TestAnioRingProfileSelect:
         self, ring_select: AnioRingProfileSelect
     ) -> None:
         """Test selecting vibrate only profile."""
-        await ring_select.async_select_option("VIBRATE_ONLY")
+        await ring_select.async_select_option("vibrate_only")
         ring_select._client.update_device_settings.assert_called_once_with(
             TEST_DEVICE_ID, ringProfile="VIBRATE_ONLY"
         )
@@ -159,3 +159,20 @@ class TestSelectSetup:
         await async_setup_entry(hass, mock_config_entry, add_entities)
 
         assert len(entities) == 0
+
+
+def test_unknown_api_profile_is_unknown(mock_coordinator_data: dict) -> None:
+    """Test a ring profile the integration doesn't know shows as unknown."""
+    from unittest.mock import MagicMock
+
+    from custom_components.anio.select import AnioRingProfileSelect
+
+    from .conftest import TEST_DEVICE_ID
+
+    mock_coordinator_data[TEST_DEVICE_ID].device.settings.ring_profile = "PARTY"
+    coordinator = MagicMock()
+    coordinator.data = mock_coordinator_data
+
+    select = AnioRingProfileSelect(coordinator, MagicMock(), TEST_DEVICE_ID)
+
+    assert select.current_option is None

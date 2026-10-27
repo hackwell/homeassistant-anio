@@ -131,7 +131,7 @@ account can be deleted in Home Assistant (device page → ⋮ → Delete).
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `select.<name>_ring_profile` | Select | Ring profile: `RING_AND_VIBRATE`, `VIBRATE_ONLY` or `SILENT` |
+| `select.<name>_ring_profile` | Select | Ring profile: `ring_and_vibrate`, `vibrate_only` or `silent` (shown as "Ring and vibrate" etc., translated) |
 
 ### Notify
 
