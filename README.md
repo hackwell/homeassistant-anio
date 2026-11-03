@@ -1,6 +1,6 @@
 # ANIO Smartwatch Integration for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/hackwell/homeassistant-anio.svg)](https://github.com/hackwell/homeassistant-anio/releases)
 [![License](https://img.shields.io/github/license/hackwell/homeassistant-anio.svg)](LICENSE)
 
@@ -34,12 +34,14 @@ A Home Assistant custom integration for ANIO children's smartwatches. Monitor yo
 
 ### Via HACS (Recommended)
 
+The integration is part of the HACS default repositories, so no custom repository is needed.
+
 1. Open HACS in your Home Assistant instance
-2. Click on "Integrations"
-3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add `https://github.com/hackwell/homeassistant-anio` as a custom repository (Category: Integration)
-5. Click "Install"
-6. Restart Home Assistant
+2. Search for "ANIO Smartwatch" and open it
+3. Click "Download"
+4. Restart Home Assistant
+
+Or with one click: [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=hackwell&repository=homeassistant-anio&category=integration)
 
 ### Manual Installation
 
